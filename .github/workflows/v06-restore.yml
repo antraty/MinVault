@@ -65,7 +65,11 @@ jobs:
         env:
           MINIO_ENDPOINT: https://s3.localhost:8443
           MC_INSECURE: '1'
-        run: ./minio/init.sh
+        run: |
+          set -a
+          . ./.env
+          set +a
+          ./minio/init.sh
 
       - name: Build backup image
         run: docker compose build backup
