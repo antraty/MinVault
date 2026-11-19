@@ -28,6 +28,8 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Cible MinIO indépendante `minio-backup` avec volume séparé.
 - Service `backup` basé sur rclone/restic, dépôt chiffré, rétention 7/4/6 et contrôle d’intégrité.
 - Planification cron configurable et statut de dernière sauvegarde au format texte/Prometheus.
+- Restauration manuelle d’un snapshot via `restore.sh`.
+- Test automatisé de restauration avec données témoins, checksums, RTO/RPO et résultat `PASS/FAIL`.
 
 ### Limites connues
 

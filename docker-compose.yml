@@ -106,7 +106,7 @@ services:
   backup:
     build:
       context: ./backup
-    image: minvault-backup:0.5
+    image: minvault-backup:0.6
     container_name: minvault-backup
     restart: unless-stopped
     depends_on:

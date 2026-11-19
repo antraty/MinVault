@@ -212,6 +212,37 @@ docker compose run --rm backup restic check
 
 La première exécution initialise le dépôt. Les exécutions suivantes sont incrémentales grâce à la déduplication restic.
 
+## Restauration et preuve v0.6
+
+Restaurer manuellement le dernier snapshot dans `/restore` :
+
+```bash
+docker compose run --rm backup /usr/local/bin/restore.sh latest /restore
+```
+
+Restaurer un snapshot précis :
+
+```bash
+docker compose run --rm backup /usr/local/bin/restore.sh SNAPSHOT_ID /restore
+```
+
+Le test automatisé crée trois fichiers témoins dans `documents`, enregistre leurs checksums, lance une sauvegarde, supprime les témoins sur la source, restaure le dernier snapshot et compare les checksums :
+
+```bash
+docker compose build backup
+docker compose run --rm backup /usr/local/bin/restore-test.sh
+```
+
+Résultat attendu :
+
+```text
+RTO_SECONDS: N
+RPO_SECONDS: N
+RESULT: PASS
+```
+
+Le RTO mesure le temps entre le début du test et la validation des fichiers restaurés. Le RPO mesure ici l’âge des données témoins au moment où le snapshot de test est terminé. Le résultat persistant est disponible dans `/status/restore-test.status`.
+
 ## Arrêt et persistance
 
 ```bash
@@ -241,7 +272,7 @@ FORCE_CERT_RENEWAL=1 ./scripts/gen-certs.sh
 docker compose restart nginx
 ```
 
-## Critère de validation v0.5
+## Critère de validation v0.6
 
 La version est validée lorsque :
 
@@ -257,4 +288,7 @@ La version est validée lorsque :
 10. le dépôt restic est chiffré et contient un snapshot `minvault` ;
 11. `restic check` termine avec succès ;
 12. `last_backup.status` indique `success=1` après un run ;
-13. une seconde exécution réutilise les données déjà présentes grâce à rclone/restic.
+13. une seconde exécution réutilise les données déjà présentes grâce à rclone/restic ;
+14. `restore.sh` restaure un snapshot vers une cible locale ;
+15. `restore-test.sh` affiche `RESULT: PASS` avec des checksums identiques ;
+16. le test produit des mesures RTO et RPO.
