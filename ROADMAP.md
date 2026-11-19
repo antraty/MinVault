@@ -18,8 +18,8 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 
 | Version | Nom de code | Thème | Priorité | Statut |
 |---------|-------------|-------|----------|----------|--------|
-| v0.1 | **Socle** | MinIO mono-nœud + outils clients | 🔴 | 🚧 |
-| v0.2 | **Cluster** | Cluster distribué 4 nœuds (haute disponibilité) | 🔴 | ⏳ |
+| v0.1 | **Socle** | MinIO mono-nœud + outils clients | 🔴 | ✅ |
+| v0.2 | **Cluster** | Cluster distribué 4 nœuds (haute disponibilité) | 🔴 | 🚧 |
 | v0.3 | **Gateway** | Nginx, TLS, point d'entrée unique | 🔴 | ⏳ |
 | v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | ⏳ |
 | v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ⏳ |
@@ -302,7 +302,7 @@ MinIO mono-nœud ─▶ Cluster ─▶ Nginx/TLS ─▶ Politiques & versionnage
 | Version | Date | Changements principaux |
 |---------|------|------------------------|
 | v0.1 | 2026-11-19 | Socle Compose MinIO mono-nœud, volume persistant, configuration `.env.example`, runbook et smoke test initial. |
-| v0.2 | _à compléter_ | |
+| v0.2 | 2026-11-19 | Cluster MinIO distribué à quatre nœuds, erasure coding, réseau dédié, volumes séparés et procédure de failover. |
 | v0.3 | _à compléter_ | |
 | v0.4 | _à compléter_ | |
 | v0.5 | _à compléter_ | |

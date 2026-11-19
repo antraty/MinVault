@@ -13,6 +13,10 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Exemple de configuration sans secrets avec `.env.example`.
 - Runbook de démarrage et d'opérations S3 de base.
 - Smoke test initial de l'endpoint de santé.
+- Cluster MinIO distribué à quatre nœuds avec erasure coding.
+- Réseau Docker dédié et volumes persistants séparés par nœud.
+- Healthchecks et ports de test distincts pour chaque nœud.
+- Procédure de panne, redémarrage et guérison du cluster.
 
 ### Limites connues
 

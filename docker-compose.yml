@@ -1,28 +1,75 @@
+x-minio-common: &minio-common
+  image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER doit être défini dans .env}
+    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD doit être défini dans .env}
+  command: server http://minio{1...4}/data --console-address ":9001"
+  networks:
+    - minvault
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 20s
+  security_opt:
+    - no-new-privileges:true
+
 services:
-  minio:
-    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
-    container_name: minvault-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    env_file:
-      - .env
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER doit être défini dans .env}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD doit être défini dans .env}
+  minio1:
+    <<: *minio-common
+    container_name: minvault-minio1
+    hostname: minio1
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_API_PORT_1:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT_1:-9100}:9001"
     volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    security_opt:
-      - no-new-privileges:true
+      - minio1_data:/data
+
+  minio2:
+    <<: *minio-common
+    container_name: minvault-minio2
+    hostname: minio2
+    ports:
+      - "${MINIO_API_PORT_2:-9001}:9000"
+      - "${MINIO_CONSOLE_PORT_2:-9101}:9001"
+    volumes:
+      - minio2_data:/data
+
+  minio3:
+    <<: *minio-common
+    container_name: minvault-minio3
+    hostname: minio3
+    ports:
+      - "${MINIO_API_PORT_3:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT_3:-9102}:9001"
+    volumes:
+      - minio3_data:/data
+
+  minio4:
+    <<: *minio-common
+    container_name: minvault-minio4
+    hostname: minio4
+    ports:
+      - "${MINIO_API_PORT_4:-9003}:9000"
+      - "${MINIO_CONSOLE_PORT_4:-9103}:9001"
+    volumes:
+      - minio4_data:/data
+
+networks:
+  minvault:
+    name: minvault_network
+    driver: bridge
 
 volumes:
-  minio_data:
-    name: minvault_minio_data
+  minio1_data:
+    name: minvault_minio1_data
+  minio2_data:
+    name: minvault_minio2_data
+  minio3_data:
+    name: minvault_minio3_data
+  minio4_data:
+    name: minvault_minio4_data
