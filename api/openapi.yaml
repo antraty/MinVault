@@ -1,0 +1,135 @@
+openapi: 3.0.3
+info:
+  title: MinVault S3 Gateway
+  version: 0.8.0
+  description: |
+    Contrat minimal des opérations S3 et endpoints opérationnels exposés par MinVault.
+    Les opérations S3 utilisent l’authentification AWS Signature Version 4.
+servers:
+  - url: https://s3.localhost
+    description: Gateway HTTPS de développement
+security:
+  - sigv4: []
+tags:
+  - name: S3
+  - name: Health
+  - name: Metrics
+paths:
+  /{bucket}/{key}:
+    parameters:
+      - $ref: '#/components/parameters/Bucket'
+      - $ref: '#/components/parameters/ObjectKey'
+    put:
+      tags: [S3]
+      summary: Déposer ou remplacer un objet
+      operationId: putObject
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '200': {description: Objet enregistré}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    get:
+      tags: [S3]
+      summary: Télécharger un objet
+      operationId: getObject
+      responses:
+        '200':
+          description: Contenu binaire de l’objet
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '404': {description: Objet introuvable}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    delete:
+      tags: [S3]
+      summary: Supprimer un objet (marqueur de suppression si versionnage actif)
+      operationId: deleteObject
+      responses:
+        '204': {description: Objet supprimé}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /{bucket}:
+    parameters:
+      - $ref: '#/components/parameters/Bucket'
+    get:
+      tags: [S3]
+      summary: Lister les objets d’un bucket
+      operationId: listObjects
+      parameters:
+        - name: list-type
+          in: query
+          schema: {type: integer, enum: [2], default: 2}
+        - name: prefix
+          in: query
+          schema: {type: string}
+        - name: continuation-token
+          in: query
+          schema: {type: string}
+      responses:
+        '200':
+          description: Liste S3 XML
+          content:
+            application/xml: {schema: {$ref: '#/components/schemas/ListBucketResult'}}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /minio/health/live:
+    get:
+      security: []
+      tags: [Health]
+      summary: Vérifier que MinIO répond
+      operationId: liveness
+      responses:
+        '200':
+          description: Service vivant
+          content: {text/plain: {schema: {type: string, example: ok}}}
+        '503': {description: Service indisponible}
+  /minio/health/cluster:
+    get:
+      security: []
+      tags: [Health]
+      summary: Vérifier la santé du cluster MinIO
+      operationId: clusterHealth
+      responses:
+        '200': {description: Cluster sain}
+        '503': {description: Cluster dégradé}
+  /minio/v2/metrics/cluster:
+    get:
+      security: []
+      tags: [Metrics]
+      summary: Exposer les métriques Prometheus du cluster
+      operationId: clusterMetrics
+      responses:
+        '200':
+          description: Métriques au format Prometheus
+          content:
+            text/plain:
+              schema: {type: string}
+components:
+  securitySchemes:
+    sigv4:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: En-tête AWS Signature Version 4 généré par mc, aws-cli ou un SDK S3.
+  parameters:
+    Bucket:
+      name: bucket
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$'}
+    ObjectKey:
+      name: key
+      in: path
+      required: true
+      schema: {type: string}
+  responses:
+    Forbidden:
+      description: Accès refusé par la politique IAM
+      content:
+        application/xml: {schema: {type: string}}
+  schemas:
+    ListBucketResult:
+      type: object
+      description: Représentation simplifiée de la réponse XML ListObjectsV2.
+      additionalProperties: true

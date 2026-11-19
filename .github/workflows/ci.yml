@@ -1,0 +1,56 @@
+name: quality checks
+
+on:
+  push:
+    branches: [manus]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable \
+            -S warning /mnt/backup/*.sh /mnt/minio/*.sh /mnt/scripts/*.sh /mnt/tests/*.sh
+
+      - name: yamllint
+        run: |
+          docker run --rm -v "$PWD:/work" cytopia/yamllint:1.35 \
+            yamllint -d relaxed /work/docker-compose.yml /work/monitoring /work/.github/workflows
+
+      - name: Hadolint
+        run: |
+          docker run --rm -i hadolint/hadolint:2.12.0 < backup/Dockerfile
+          docker run --rm -i hadolint/hadolint:2.12.0 < monitoring/backup-exporter/Dockerfile
+
+      - name: Compose config
+        run: |
+          cat > .env <<'EOF'
+          MINIO_ROOT_USER=minvault-admin
+          MINIO_ROOT_PASSWORD=minvault-root-password-123
+          BACKUP_MINIO_ROOT_USER=backup-admin
+          BACKUP_MINIO_ROOT_PASSWORD=backup-root-password-123
+          RESTIC_PASSWORD=restic-password-123
+          BACKUP_AGENT_SECRET=backup-agent-password-123
+          APP_DOCS_SECRET=app-docs-password-123
+          APP_MEDIA_SECRET=app-media-password-123
+          APP_LOGS_SECRET=app-logs-password-123
+          AUDITOR_SECRET=auditor-password-123
+          GRAFANA_ADMIN_PASSWORD=grafana-password-123
+          EOF
+          docker compose config -q
+
+      - name: OpenAPI lint
+        run: |
+          docker run --rm -v "$PWD:/work" redocly/cli:latest lint /work/api/openapi.yaml
+
+      - name: Local script and JSON checks
+        run: |
+          make ci

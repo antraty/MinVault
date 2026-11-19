@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT_DIR"
+
+source .env
+export MINIO_ROOT_USER MINIO_ROOT_PASSWORD APP_DOCS_SECRET APP_MEDIA_SECRET
+export MINIO_ENDPOINT="${MINIO_ENDPOINT:-https://s3.localhost}"
+export MC_INSECURE="${MC_INSECURE:-1}"
+
+./scripts/smoke-test.sh
+./tests/test_policies.sh
+./tests/test_anonymous.sh
+./tests/test_versioning.sh
+
+docker compose run --rm backup /usr/local/bin/backup.sh
+docker compose run --rm backup /usr/local/bin/restore-test.sh
+
+docker compose stop minio1
+trap 'docker compose start minio1 >/dev/null' EXIT
+sleep 5
+mc --insecure cp "${ROOT_DIR}/README.md" vault/documents/v08-failover-test.md >/dev/null
+mc --insecure stat vault/documents/v08-failover-test.md >/dev/null
+ok='OK: failover MinIO conserve lecture/écriture pendant l’arrêt d’un nœud'
+printf '%s\n' "$ok"

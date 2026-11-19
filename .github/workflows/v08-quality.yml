@@ -1,0 +1,72 @@
+name: v0.8 quality integration
+
+on:
+  push:
+    branches: [manus]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MinIO client
+        run: |
+          MC_URL="$(curl --fail --silent --show-error \
+            https://api.github.com/repos/minio/mc/releases/latest \
+            | jq -r '.assets[] | select(.name | test("mc\\.linux-amd64\\.RELEASE[^.]*.*$")) | .browser_download_url' \
+            | head -n 1)"
+          test -n "$MC_URL"
+          curl --fail --silent --show-error --location "$MC_URL" --output /tmp/mc
+          chmod +x /tmp/mc
+          sudo mv /tmp/mc /usr/local/bin/mc
+
+      - name: Prepare environment
+        run: |
+          cat > .env <<'EOF'
+          MINIO_ROOT_USER=minvault-admin
+          MINIO_ROOT_PASSWORD=minvault-root-password-123
+          MINIO_PROMETHEUS_AUTH_TYPE=public
+          BACKUP_MINIO_ROOT_USER=backup-admin
+          BACKUP_MINIO_ROOT_PASSWORD=backup-root-password-123
+          RESTIC_PASSWORD=restic-password-123
+          BACKUP_AGENT_SECRET=backup-agent-password-123
+          APP_DOCS_SECRET=app-docs-password-123
+          APP_MEDIA_SECRET=app-media-password-123
+          APP_LOGS_SECRET=app-logs-password-123
+          AUDITOR_SECRET=auditor-password-123
+          GRAFANA_ADMIN_PASSWORD=grafana-password-123
+          MINIO_ENDPOINT=https://s3.localhost:8443
+          NGINX_HTTP_PORT=8080
+          NGINX_HTTPS_PORT=8443
+          PROMETHEUS_PORT=9090
+          GRAFANA_PORT=3000
+          EOF
+          printf '127.0.0.1 s3.localhost console.localhost\n' | sudo tee -a /etc/hosts
+          ./scripts/gen-certs.sh
+
+      - name: Start and provision
+        run: |
+          docker compose up -d minio1 minio2 minio3 minio4 minio-backup nginx
+          for attempt in {1..60}; do
+            curl --insecure --silent --fail https://s3.localhost:8443/minio/health/live >/dev/null && break
+            sleep 5
+          done
+          set -a; . ./.env; set +a
+          MINIO_ENDPOINT=https://s3.localhost:8443 MC_INSECURE=1 ./minio/init.sh
+          docker compose build backup
+
+      - name: Run complete functional suite
+        run: make test
+
+      - name: Validate OpenAPI file exists
+        run: test -s api/openapi.yaml
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
