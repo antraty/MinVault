@@ -18,3 +18,7 @@ certs/
 # Logs et données locales
 *.log
 data/
+
+# Python
+__pycache__/
+*.pyc
