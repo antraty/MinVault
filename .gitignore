@@ -1,0 +1,20 @@
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+
+# Certificats et clés privées
+*.key
+*.pem
+*.crt
+certs/
+
+# Système et éditeurs
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Logs et données locales
+*.log
+data/
