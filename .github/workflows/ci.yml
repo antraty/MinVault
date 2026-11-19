@@ -17,8 +17,9 @@ jobs:
 
       - name: ShellCheck
         run: |
+          files="$(find backup minio scripts tests -type f -name '*.sh' -printf '/mnt/%p ')"
           docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:stable \
-            -S warning /mnt/backup/*.sh /mnt/minio/*.sh /mnt/scripts/*.sh /mnt/tests/*.sh
+            -S warning $files
 
       - name: yamllint
         run: |
