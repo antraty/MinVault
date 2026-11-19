@@ -66,9 +66,14 @@ ensure_policy rw-media rw-media.json
 ensure_policy write-logs write-logs.json
 ensure_policy readonly-all readonly-all.json
 ensure_policy backup-readonly backup-readonly.json
+ensure_policy backup-immutable-write backup-immutable-write.json
 
 for bucket in documents media logs backups; do
-  "${MC[@]}" mb --ignore-existing "$MINIO_ALIAS/$bucket" >/dev/null
+  if [[ "$bucket" == "backups" ]]; then
+    "${MC[@]}" mb --ignore-existing --with-lock "$MINIO_ALIAS/$bucket" >/dev/null
+  else
+    "${MC[@]}" mb --ignore-existing "$MINIO_ALIAS/$bucket" >/dev/null
+  fi
   "${MC[@]}" anonymous set none "$MINIO_ALIAS/$bucket" >/dev/null
   "${MC[@]}" version enable "$MINIO_ALIAS/$bucket" >/dev/null
   # Nettoyage des anciennes versions.
@@ -78,6 +83,13 @@ for bucket in documents media logs backups; do
     printf 'Avertissement: règle ILM à vérifier pour %s (syntaxe mc variable selon version).\n' "$bucket" >&2
   printf 'Bucket sécurisé et versionné : %s\n' "$bucket"
 done
+
+# Object Lock cannot be enabled on an existing bucket. Keep the legacy bucket
+# intact and provision a dedicated immutable bucket instead.
+"${MC[@]}" mb --ignore-existing --with-lock "$MINIO_ALIAS/backups-immutable" >/dev/null
+"${MC[@]}" anonymous set none "$MINIO_ALIAS/backups-immutable" >/dev/null
+"${MC[@]}" version enable "$MINIO_ALIAS/backups-immutable" >/dev/null
+"${MC[@]}" retention set --default compliance "${BACKUP_RETENTION:-30d}" "$MINIO_ALIAS/backups-immutable"
 
 ensure_user app-docs "$APP_DOCS_SECRET"
 attach_policy_user rw-documents app-docs
@@ -89,6 +101,7 @@ ensure_user auditeur "$AUDITOR_SECRET"
 attach_policy_user readonly-all auditeur
 ensure_user backup-agent "$BACKUP_AGENT_SECRET"
 attach_policy_user backup-readonly backup-agent
+attach_policy_user backup-immutable-write backup-agent
 
 # Le groupe d’audit permet d’ajouter d’autres comptes sans modifier la politique.
 if ! "${MC[@]}" admin group info "$MINIO_ALIAS" auditors >/dev/null 2>&1; then
@@ -100,5 +113,3 @@ fi
 
 printf '\nProvisioning v0.4 terminé.\n'
 "${MC[@]}" admin info "$MINIO_ALIAS"
-
-

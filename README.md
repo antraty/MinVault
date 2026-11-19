@@ -82,7 +82,7 @@ Mettre en place un stockage compatible S3 auto-hébergé avec politiques d'accè
 - ✅ **Utilisateurs et groupes** dédiés (pas d'usage du compte root au quotidien)
 - ✅ **Versionnage** des objets
 - ✅ **Règles de cycle de vie** (expiration des anciennes versions, nettoyage)
-- ✅ *(Optionnel)* **Object Lock** (WORM) pour l'immuabilité des sauvegardes
+- ✅ **Object Lock** (WORM) avec rétention Compliance sur `backups-immutable`
 
 ### Sauvegarde et restauration
 - ✅ **Sauvegarde planifiée** (cron/systemd timer) avec **restic** (chiffrée, dédupliquée, incrémentale)
@@ -237,8 +237,8 @@ minvault/
 
 - Linux / macOS / Windows (WSL2) avec **Docker ≥ 24** et **Docker Compose v2**
 - ≥ 4 Go de RAM, ≥ 20 Go d'espace disque libre
-- `git`, `curl`, `openssl`
-- *(Optionnel)* le client **mc** et **aws-cli** sur la machine hôte pour tester
+- `git`, `curl`, `openssl` et le client MinIO **mc** dans le `PATH` de l'hôte
+- *(Optionnel)* `aws-cli` pour tester l'API S3
 
 ---
 
@@ -246,101 +246,46 @@ minvault/
 
 ```bash
 # 1. Cloner le dépôt
-git clone https://github.com/<votre-compte>/minvault.git
-cd minvault
+git clone https://github.com/antraty/MinVault.git
+cd MinVault
 
 # 2. Configurer l'environnement
 cp .env.example .env
-nano .env                       # Définir des mots de passe forts
+nano .env                       # Remplacer chaque valeur CHANGER_ par un secret fort
 
-# 3. Générer des certificats auto-signés (développement)
-./scripts/gen-certs.sh
+# 3. Installer mc depuis la documentation officielle :
+#    https://min.io/docs/minio/linux/reference/minio-mc.html
 
-# 4. Démarrer toute la pile
-docker compose up -d
+# 4. Démarrer toute la pile et générer les certificats de développement
+make up
 
-# 5. Initialiser buckets, utilisateurs et politiques
-docker compose run --rm mc /scripts/init.sh
+# 5. Créer buckets, utilisateurs et politiques
+make init
 
-# 6. Vérifier
-./scripts/smoke-test.sh
+# 6. Vérifier le déploiement complet
+make test
 ```
 
-**Accès (par défaut) :**
+Le premier démarrage requiert `mc` sur l'hôte (commande `mc`, version récente) et Docker Compose v2.
+Les variables de `.env` configurent les conteneurs; le fichier `.env` est ignoré par Git et ne doit pas être partagé.
+
+**Accès locaux par défaut** (certificat de développement auto-signé) :
 
 | Service | URL |
 |---------|-----|
-| API S3 | `https://s3.localhost` |
-| Console MinIO | `https://console.localhost` |
+| API S3 | `https://s3.localhost:8443` |
+| Console MinIO | `https://console.localhost:8443` |
 | Prometheus | `http://localhost:9090` |
 | Grafana | `http://localhost:3000` |
+
+L'URL de l'API S3 n'est pas une page web; un accès sans authentification à `/` peut répondre `403 AccessDenied`.
+Ouvrir la console dans un navigateur affiche un avertissement TLS attendu en développement.
 
 ---
 
 ## 9. 🔧 Configuration
 
-### Fichier `.env.example`
-
-```ini
-# --- MinIO (cluster principal) ---
-MINIO_ROOT_USER=minvault-admin
-MINIO_ROOT_PASSWORD=CHANGER_MOI_MOT_DE_PASSE_LONG
-MINIO_PROMETHEUS_AUTH_TYPE=public
-
-# --- MinIO (cible de sauvegarde) ---
-BACKUP_MINIO_ROOT_USER=backup-admin
-BACKUP_MINIO_ROOT_PASSWORD=CHANGER_MOI_AUSSI
-
-# --- restic ---
-RESTIC_REPOSITORY=s3:http://minio-backup:9000/restic-repo
-RESTIC_PASSWORD=PHRASE_DE_PASSE_RESTIC_TRES_LONGUE
-AWS_ACCESS_KEY_ID=backup-admin
-AWS_SECRET_ACCESS_KEY=CHANGER_MOI_AUSSI
-
-# --- Planification ---
-BACKUP_CRON=0 2 * * *
-```
-
-> ⚠️ **Ne jamais committer le fichier `.env`.** Perdre `RESTIC_PASSWORD` = perdre l'accès aux sauvegardes. Conservez-le dans un gestionnaire de mots de passe.
-
-### Extrait de `docker-compose.yml` (cluster)
-
-```yaml
-x-minio-common: &minio-common
-  image: cgr.dev/chainguard/minio:latest   # Image publique maintenue ; pinner un digest en production
-  command: server http://minio{1...4}/data --console-address ":9001"
-  environment:
-    MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    MINIO_PROMETHEUS_AUTH_TYPE: ${MINIO_PROMETHEUS_AUTH_TYPE}
-  healthcheck:
-    test: ["CMD", "mc", "ready", "local"]
-    interval: 30s
-    timeout: 20s
-    retries: 3
-
-services:
-  minio1:
-    <<: *minio-common
-    hostname: minio1
-    volumes: [data1:/data]
-  minio2:
-    <<: *minio-common
-    hostname: minio2
-    volumes: [data2:/data]
-  minio3:
-    <<: *minio-common
-    hostname: minio3
-    volumes: [data3:/data]
-  minio4:
-    <<: *minio-common
-    hostname: minio4
-    volumes: [data4:/data]
-
-volumes: { data1: {}, data2: {}, data3: {}, data4: {} }
-```
-
-> 💡 Vérifiez la dernière syntaxe et les bonnes pratiques dans la documentation officielle MinIO : <https://min.io/docs/minio/container/index.html>. Les images et options évoluent ; **figez les versions** dans votre dépôt final.
+Le détail des variables requises (identifiants MinIO, comptes applicatifs, RESTIC, ports et supervision) se trouve dans le fichier [`.env.example`](.env.example). Remplacez toutes les valeurs `CHANGER_` avant le démarrage; les images de conteneurs sont référencées par digest dans Compose et les Dockerfiles pour rendre les téléchargements reproductibles.
 
 ---
 
@@ -353,7 +298,8 @@ volumes: { data1: {}, data2: {}, data3: {}, data4: {} }
 | `documents` | Fichiers métier | ✅ | RW pour `app-docs`, R pour `auditeur` |
 | `media` | Images/vidéos | ✅ | RW pour `app-media` |
 | `logs` | Journaux applicatifs | ✅ (rétention courte) | W pour `app-*`, R pour `auditeur` |
-| `backups` | Exports / copies | ✅ + *Object Lock* (opt.) | RW pour `backup-agent` uniquement |
+| `backups` | Anciennes exports / copies | ✅ | RW réservé |
+| `backups-immutable` | Copies immuables | ✅ Object Lock Compliance | Lecture/écriture sans droit de suppression pour `backup-agent` |
 
 ### Exemple de politique (lecture/écriture sur un seul bucket)
 
@@ -378,7 +324,7 @@ volumes: { data1: {}, data2: {}, data3: {}, data4: {} }
 ### Commandes d'initialisation (`minio/init.sh`)
 
 ```bash
-mc alias set vault https://s3.localhost "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+mc --insecure alias set vault https://s3.localhost:8443 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
 
 # Buckets + versionnage
 for b in documents media logs backups; do
@@ -566,11 +512,11 @@ Exemples d'usage :
 
 ```bash
 # aws-cli
-aws --endpoint-url https://s3.localhost s3 cp fichier.txt s3://documents/
+aws --endpoint-url https://s3.localhost:8443 s3 cp fichier.txt s3://documents/
 
 # Python (boto3)
 import boto3
-s3 = boto3.client("s3", endpoint_url="https://s3.localhost",
+s3 = boto3.client("s3", endpoint_url="https://s3.localhost:8443",
                   aws_access_key_id="app-media", aws_secret_access_key="***")
 s3.put_object(Bucket="media", Key="hello.txt", Body=b"bonjour")
 ```

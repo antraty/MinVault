@@ -1,7 +1,7 @@
 x-minio-common: &minio-common
   # Les images communautaires minio/minio ne sont plus publiées sur Docker Hub/Quay.
   # Chainguard fournit une image publique maintenue et compatible MinIO.
-  image: cgr.dev/chainguard/minio:latest
+  image: cgr.dev/chainguard/minio@sha256:16b824a0016ffad3dfa8b059755f83800aa42ca68fe86f1782cabd0c5a16d322
   restart: unless-stopped
   env_file:
     - .env
@@ -54,7 +54,7 @@ services:
       - minio4_data:/data
 
   minio-backup:
-    image: cgr.dev/chainguard/minio:latest
+    image: cgr.dev/chainguard/minio@sha256:16b824a0016ffad3dfa8b059755f83800aa42ca68fe86f1782cabd0c5a16d322
     container_name: minvault-minio-backup
     hostname: minio-backup
     restart: unless-stopped
@@ -78,7 +78,7 @@ services:
       - no-new-privileges:true
 
   nginx:
-    image: nginx:1.27.3-alpine
+    image: nginx@sha256:814a8e88df978ade80e584cc5b333144b9372a8e3c98872d07137dbf3b44d0e4
     container_name: minvault-nginx
     restart: unless-stopped
     depends_on:
@@ -129,6 +129,14 @@ services:
       RCLONE_CONFIG_VAULT_SECRET_ACCESS_KEY: ${BACKUP_AGENT_SECRET:?BACKUP_AGENT_SECRET doit être défini dans .env}
       RCLONE_CONFIG_VAULT_ENDPOINT: http://minio1:9000
       RCLONE_CONFIG_VAULT_REGION: us-east-1
+      RCLONE_CONFIG_REMOTE_TYPE: s3
+      RCLONE_CONFIG_REMOTE_PROVIDER: Minio
+      RCLONE_CONFIG_REMOTE_ENV_AUTH: "false"
+      RCLONE_CONFIG_REMOTE_ACCESS_KEY_ID: ${MIRROR_ACCESS_KEY:-${BACKUP_MINIO_ROOT_USER:?BACKUP_MINIO_ROOT_USER doit être défini dans .env}}
+      RCLONE_CONFIG_REMOTE_SECRET_ACCESS_KEY: ${MIRROR_SECRET_KEY:-${BACKUP_MINIO_ROOT_PASSWORD:?BACKUP_MINIO_ROOT_PASSWORD doit être défini dans .env}}
+      RCLONE_CONFIG_REMOTE_ENDPOINT: ${MIRROR_ENDPOINT:-http://minio-backup:9000}
+      RCLONE_CONFIG_REMOTE_REGION: us-east-1
+      MIRROR_BUCKET_PREFIX: ${MIRROR_BUCKET_PREFIX:-minvault}
       RESTIC_REPOSITORY: s3:http://minio-backup:9000/restic-repo
       RESTIC_PASSWORD: ${RESTIC_PASSWORD:?RESTIC_PASSWORD est requis dans .env}
       AWS_S3_FORCE_PATH_STYLE: "true"
@@ -165,7 +173,7 @@ services:
       - no-new-privileges:true
 
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus@sha256:6559acbd5d770b15bb3c954629ce190ac3cbbdb2b7f1c30f0385c4e05104e218
     container_name: minvault-prometheus
     restart: unless-stopped
     command:
@@ -185,7 +193,7 @@ services:
       - no-new-privileges:true
 
   grafana:
-    image: grafana/grafana:11.5.2
+    image: grafana/grafana@sha256:8b37a2f028f164ce7b9889e1765b9d6ee23fec80f871d156fbf436d6198d32b7
     container_name: minvault-grafana
     restart: unless-stopped
     depends_on:
@@ -201,6 +209,28 @@ services:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - minvault
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    build:
+      context: ./api
+    image: minvault-api:1.3
+    container_name: minvault-api
+    restart: unless-stopped
+    depends_on:
+      minio1:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      MINIO_ENDPOINT: http://minio1:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "${API_PORT:-8000}:8000"
     networks:
       - minvault
     security_opt:

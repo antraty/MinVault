@@ -26,9 +26,9 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 | v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ✅ |
 | v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ✅ |
 | v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ✅ |
-| v1.0 | **Stable** | Première version complète et publique | 🔴 | ⏳ |
-| v1.1 | **Forteresse** | Sécurité avancée (Object Lock, chiffrement, audit) | 🟢 | ⏳ |
-| v1.2 | **Miroir** | Réplication et sauvegarde hors site | 🟢 | ⏳ |
+| v1.0 | **Stable** | Première version complète et publique | 🔴 | ✅ |
+| v1.1 | **Forteresse** | Sécurité avancée (Object Lock, chiffrement, audit) | 🟢 | 🚧 |
+| v1.2 | **Miroir** | Réplication et sauvegarde hors site | 🟢 | 🚧 |
 | v1.3 | **Portail** | Service applicatif FastAPI + interface | 🟢 | ⏳ |
 | v2.0 | **Cloud native** | Kubernetes / IaC / SSO | 🟢 | ⏳ |
 
@@ -234,6 +234,10 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 - Détection de secrets (gitleaks) dans la CI
 - Durcissement Nginx (en-têtes de sécurité, TLS moderne)
 
+**Implémenté et testé dans ce dépôt :** bucket `backups-immutable` avec rétention Compliance par défaut, test de suppression d'une version verrouillée, analyse Gitleaks/Trivy en CI, en-têtes et paramètres TLS Nginx. Le dépôt restic est également chiffré par sa phrase secrète.
+
+**À terminer avant de déclarer le jalon complet :** chiffrement SSE côté MinIO, journalisation d'audit durable des événements S3 et procédure automatisée de rotation des clés. Les secrets fournis à la rotation doivent rester gérés par l'opérateur (aucune rotation ne peut changer une clé sans synchroniser les consommateurs).
+
 **Critère de validation :** une tentative de suppression d'une sauvegarde verrouillée est refusée.
 
 ---
@@ -246,6 +250,10 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 - Application réelle de la stratégie **3-2-1**
 - Test de basculement (*failover*) entre sites
 - Alerte en cas de retard de réplication
+
+**Implémenté et testé :** copie rclone non destructive de `documents`, `media` et `logs` vers une cible configurable, avec vérification d'intégrité et test de conservation d'une copie après suppression à la source.
+
+**Limite actuelle :** par défaut la cible est `minio-backup` sur le même hôte. Configurer `MIRROR_ENDPOINT`, `MIRROR_ACCESS_KEY` et `MIRROR_SECRET_KEY` vers un autre site avant d'affirmer que la stratégie 3-2-1 ou le sinistre total intersite est validé.
 
 **Critère de validation :** un objet écrit sur le site A apparaît sur le site B ; restauration possible depuis le site B.
 

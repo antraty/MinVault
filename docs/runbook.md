@@ -1,6 +1,6 @@
-# Runbook MinVault — v0.4 Coffre
+# Runbook MinVault — v1.0 Stable
 
-Ce runbook décrit le cluster MinVault derrière un point d’entrée Nginx : HTTPS obligatoire, certificats locaux de développement, routage S3/console et ports directs MinIO non publiés.
+Ce runbook décrit le cluster MinVault, sa configuration, sa supervision et ses procédures d'exploitation.
 
 ## Prérequis
 
@@ -9,18 +9,13 @@ Ce runbook décrit le cluster MinVault derrière un point d’entrée Nginx : HT
 - `curl`, `openssl`
 - Le client MinIO `mc`
 
-> Cette configuration utilise des certificats auto-signés pour le développement. En production, utiliser un certificat délivré par une autorité de confiance et des noms DNS réels.
-
 ## Préparer les certificats et les hôtes locaux
 
 Depuis la racine du dépôt :
 
 ```bash
 cp .env.example .env
-# Modifier MINIO_ROOT_PASSWORD dans .env
-set -a; . ./.env; set +a
-
-./scripts/gen-certs.sh
+# Remplacer toutes les valeurs CHANGER_ dans .env par des secrets forts
 ```
 
 Les noms `s3.localhost` et `console.localhost` sont généralement résolus vers `127.0.0.1` par les navigateurs modernes. Si ce n’est pas le cas, ajouter ces lignes au fichier `/etc/hosts` :
@@ -32,15 +27,15 @@ Les noms `s3.localhost` et `console.localhost` sont généralement résolus vers
 ## Démarrage
 
 ```bash
-docker compose up -d
+make up
 docker compose ps
 ```
 
-Le service `nginx` attend que les quatre nœuds MinIO soient sains. Vérifier le gateway :
+Le service `nginx` attend que les quatre nœuds MinIO soient sains. Le gateway utilise les ports configurés dans `.env` (8080/8443 par défaut) :
 
 ```bash
-curl --insecure --fail https://s3.localhost/healthz
-curl --insecure --fail --head http://s3.localhost/healthz
+curl --insecure --fail https://s3.localhost:8443/healthz
+curl --insecure --fail --head http://s3.localhost:8080/healthz
 ```
 
 La première commande doit renvoyer `ok`. La seconde doit afficher une redirection `301` vers HTTPS.
@@ -49,8 +44,9 @@ La première commande doit renvoyer `ok`. La seconde doit afficher une redirecti
 
 | Service | URL |
 |---|---|
-| API S3 | `https://s3.localhost` |
-| Console MinIO | `https://console.localhost` |
+| API S3 | `https://s3.localhost:8443` |
+| Console MinIO | `https://console.localhost:8443` |
+| Grafana (Supervision) | `https://grafana.localhost:8443` |
 
 Ouvrir la console dans un navigateur et accepter l’exception du certificat auto-signé de développement. Les ports `9000` à `9003` et `9001` des nœuds MinIO ne sont plus publiés sur l’hôte : les clients passent par Nginx.
 
@@ -59,7 +55,7 @@ Ouvrir la console dans un navigateur et accepter l’exception du certificat aut
 `mc` doit accepter le certificat de développement auto-signé :
 
 ```bash
-mc alias set --insecure vault https://s3.localhost \
+mc alias set --insecure vault https://s3.localhost:8443 \
   "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
 
 mc admin info --insecure vault
@@ -74,23 +70,22 @@ set -a; . ./.env; set +a
 ./minio/init.sh
 ```
 
-Le script est idempotent : il peut être relancé après une erreur ou un redémarrage. Il crée les buckets `documents`, `media`, `logs` et `backups`, désactive l’accès anonyme, active le versionnage, installe les règles ILM et configure les utilisateurs suivants :
+Le script est idempotent : il peut être relancé après une erreur ou un redémarrage. Il crée les buckets `documents`, `media`, `logs` et `backups`, désactive l’accès anonyme, active le versionnage, installe les règles ILM et configure les utilisateurs.
 
-| Utilisateur | Accès |
-|---|---|
-| `app-docs` | lecture/écriture dans `documents` uniquement |
-| `app-media` | lecture/écriture dans `media` uniquement |
-| `app-logs` | écriture dans `logs` uniquement |
-| `auditeur` | lecture des données applicatives |
-| `backup-agent` | lecture des buckets pour la sauvegarde |
+Le bucket historique `backups` ne peut pas recevoir Object Lock après sa création. Le provisioning crée donc `backups-immutable` avec Object Lock en mode Compliance et une rétention par défaut (`BACKUP_RETENTION`, 30 jours par défaut). Le compte `backup-agent` peut lire et écrire dans ce bucket, mais ne possède pas le droit IAM de suppression. Les objets ne peuvent être supprimés qu'après la période de rétention.
 
-Le compte root est réservé à l’administration du cluster. Les secrets ne doivent jamais être ajoutés à Git.
+Vérifier le verrouillage :
+
+```bash
+bash tests/test_object_lock.sh
+mc --insecure retention info vault/backups-immutable
+```
 
 ## Opérations S3 de base
 
 ```bash
 mc mb --ignore-existing --insecure vault/documents
-printf 'MinVault v0.3\n' > /tmp/minvault-demo.txt
+printf 'MinVault v1.0\n' > /tmp/minvault-demo.txt
 mc cp --insecure /tmp/minvault-demo.txt vault/documents/
 mc ls --insecure vault/documents
 mc cp --insecure vault/documents/minvault-demo.txt /tmp/minvault-restored.txt
@@ -100,94 +95,27 @@ cmp /tmp/minvault-demo.txt /tmp/minvault-restored.txt
 mc share download --insecure vault/documents/minvault-demo.txt
 ```
 
-## Validation des droits et du versionnage
+## Validation des droits, du versionnage et de l'anonymat
 
-Vérifier qu’un compte media ne peut pas lire le bucket documents :
-
-```bash
-mc alias set --insecure media-user https://s3.localhost app-media "$APP_MEDIA_SECRET"
-if mc ls --insecure media-user/documents; then
-  echo 'ERREUR: app-media peut lire documents' >&2
-  exit 1
-else
-  echo 'OK: app-media est refusé sur documents'
-fi
-```
-
-Vérifier qu’un objet supprimé reste récupérable grâce au versionnage :
+Les scripts de test automatisés valident ces mécanismes à chaque modification :
 
 ```bash
-printf 'version 1\n' > /tmp/versioned.txt
-mc cp --insecure /tmp/versioned.txt vault/documents/versioned.txt
-printf 'version 2\n' > /tmp/versioned.txt
-mc cp --insecure /tmp/versioned.txt vault/documents/versioned.txt
-mc rm --insecure vault/documents/versioned.txt
-
-# Relever l’identifiant d’une ancienne version dans la sortie suivante.
-mc ls --versions --insecure vault/documents/versioned.txt
-
-# Restaurer une version choisie (remplacer VERSION_ID).
-mc cp --insecure --version-id VERSION_ID \
-  vault/documents/versioned.txt vault/documents/versioned.txt
+./tests/run-tests.sh
 ```
 
-Vérifier l’absence d’accès anonyme :
+## Supervision et Alertes (v0.7)
 
-```bash
-status=$(curl --insecure --silent --output /dev/null --write-out '%{http_code}' \
-  https://s3.localhost/documents/versioned.txt)
-test "$status" = 403
-echo "OK: accès anonyme refusé ($status)"
-```
+MinVault intègre une supervision complète via Prometheus et Grafana.
 
-## Test de panne et routage Nginx
+- **URL Grafana :** `https://grafana.localhost:8443`
+- **Dashboard :** "MinVault Overview" (provisionné automatiquement)
+- **Alertes :** Configurées dans `monitoring/alerts.yml`, remontent dans le dashboard Grafana et via le service Alertmanager si configuré.
 
-Ce test valide qu’un nœud peut être arrêté sans interrompre l’accès via le point d’entrée unique.
-
-1. Créer un objet témoin via HTTPS :
-
-   ```bash
-   printf 'objet de test v0.3\n' > /tmp/failover.txt
-   mc cp --insecure /tmp/failover.txt vault/documents/failover.txt
-   ```
-
-2. Arrêter un nœud :
-
-   ```bash
-   docker compose stop minio1
-   docker compose ps
-   ```
-
-3. Vérifier que le gateway continue de servir les données et accepte une écriture :
-
-   ```bash
-   mc cp --insecure vault/documents/failover.txt /tmp/failover-restored.txt
-   cmp /tmp/failover.txt /tmp/failover-restored.txt
-   printf 'écriture pendant la panne\n' > /tmp/failover-new.txt
-   mc cp --insecure /tmp/failover-new.txt vault/documents/
-   ```
-
-4. Redémarrer le nœud et attendre sa guérison :
-
-   ```bash
-   docker compose start minio1
-   docker compose ps
-   mc admin heal -r --insecure vault
-   mc admin info --insecure vault
-   ```
-
-## Sauvegarde planifiée v0.5
+## Sauvegarde planifiée (v0.5)
 
 La cible `minio-backup` est une instance MinIO séparée du cluster principal. Le service `backup` synchronise les buckets applicatifs avec `rclone`, crée un dépôt restic chiffré et applique la rétention `7 jours / 4 semaines / 6 mois`.
 
-Après avoir renseigné `BACKUP_MINIO_ROOT_PASSWORD` et `RESTIC_PASSWORD` dans `.env` :
-
-```bash
-docker compose build backup
-docker compose up -d minio-backup backup
-```
-
-La planification par défaut est quotidienne à 02:00 (`BACKUP_CRON`). Pour lancer une sauvegarde immédiatement :
+Pour lancer une sauvegarde immédiatement :
 
 ```bash
 docker compose run --rm backup /usr/local/bin/backup.sh
@@ -201,6 +129,17 @@ docker compose exec backup cat /status/last_backup.prom
 docker compose exec backup tail -n 100 /var/log/minvault/backup.log
 ```
 
+## Restauration automatisée (v0.6)
+
+Le scénario de test de restauration complet est automatisé :
+
+```bash
+docker compose run --rm backup /usr/local/bin/restore-test.sh
+```
+
+Si le test affiche `RESULT: PASS`, les sauvegardes sont intègres et restaurables.
+
+
 Le fichier `last_backup.prom` expose notamment `minvault_backup_success`, `minvault_backup_timestamp_seconds` et `minvault_backup_duration_seconds`. Un code de retour non nul indique un échec exploitable par cron ou une supervision ultérieure.
 
 Vérifier manuellement le dépôt restic :
@@ -211,6 +150,21 @@ docker compose run --rm backup restic check
 ```
 
 La première exécution initialise le dépôt. Les exécutions suivantes sont incrémentales grâce à la déduplication restic.
+
+### Miroir de réplication v1.2
+
+À chaque sauvegarde, rclone lit les buckets sources avec l'alias `vault` (utilisateur `backup-agent`) et copie vers les buckets `minvault-documents`, `minvault-media` et `minvault-logs` de `minio-backup` (alias `remote`). La commande `copy` ne propage pas les suppressions de la source. La cible MinIO est distincte du cluster principal, mais si elle est hébergée sur la même machine, elle ne constitue pas un véritable site hors site ni une stratégie 3-2-1 complète.
+
+Après une sauvegarde, contrôler la copie :
+
+```bash
+for bucket in documents media logs; do
+  docker compose run --rm backup rclone check \
+    "vault:$bucket" "remote:minvault-$bucket" --one-way
+done
+```
+
+Le miroir est une copie de disponibilité, pas le dépôt restic chiffré. Pour obtenir une copie hors site réelle, définir une cible distante indépendante et protégée (réseau, identifiants et stockage dédiés) avant de déclarer la stratégie 3-2-1 satisfaite.
 
 ## Supervision v0.7
 
@@ -299,8 +253,8 @@ docker compose restart nginx
 
 La version est validée lorsque :
 
-1. `https://s3.localhost` répond via Nginx ;
-2. `https://console.localhost` affiche la console MinIO ;
+1. `https://s3.localhost:8443` répond via Nginx ;
+2. `https://console.localhost:8443` affiche la console MinIO ;
 3. HTTP redirige vers HTTPS ;
 4. les quatre nœuds MinIO ne publient aucun port directement sur l’hôte ;
 5. un fichier peut être envoyé et récupéré via `mc` ou `aws-cli` en HTTPS ;

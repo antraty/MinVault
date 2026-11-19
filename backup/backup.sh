@@ -49,7 +49,11 @@ printf '\n[%s] Début de la sauvegarde MinVault\n' "$(now)"
 rm -rf "${STAGING_DIR:?}"/*
 
 for bucket in documents media logs; do
-  printf 'Synchronisation rclone du bucket %s\n' "$bucket"
+  mirror_bucket="${MIRROR_BUCKET_PREFIX:-minvault}-$bucket"
+  printf 'Copie rclone du bucket %s vers le miroir %s\n' "$bucket" "$mirror_bucket"
+  rclone mkdir "remote:$mirror_bucket"
+  rclone copy "vault:$bucket" "remote:$mirror_bucket" --fast-list --checksum --stats=10s
+  printf 'Synchronisation rclone du bucket %s vers staging\n' "$bucket"
   rclone sync "vault:$bucket" "$STAGING_DIR/$bucket" --fast-list --checksum --stats=10s
  done
 

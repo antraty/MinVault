@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+export PATH="${HOME}/.local/bin:${PATH}"
 set -a
 source .env
 set +a
@@ -18,8 +19,13 @@ export NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-443}"
 ./tests/test_policies.sh
 ./tests/test_anonymous.sh
 ./tests/test_versioning.sh
+bash ./tests/test_object_lock.sh
 
 docker compose run --rm backup /usr/local/bin/backup.sh
+bash ./tests/test_mirror.sh
+for bucket in documents media logs; do
+  docker compose run --rm backup rclone check "vault:$bucket" "remote:${MIRROR_BUCKET_PREFIX:-minvault}-$bucket" --one-way
+done
 docker compose run --rm backup /usr/local/bin/restore-test.sh
 
 docker compose stop minio1
