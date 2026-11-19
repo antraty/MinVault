@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="${HOME}/.local/bin:${PATH}"
 : "${MINIO_ROOT_USER:?MINIO_ROOT_USER est requis}"
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD est requis}"
 : "${APP_DOCS_SECRET:?APP_DOCS_SECRET est requis}"

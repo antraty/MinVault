@@ -10,9 +10,11 @@ down:
 	$(COMPOSE) down
 
 init:
+	set -a; . ./.env; set +a; \
 	./minio/init.sh
 
 smoke:
+	set -a; . ./.env; set +a; \
 	./scripts/smoke-test.sh
 
 test:

@@ -4,13 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+set -a
 source .env
+set +a
 export MINIO_ROOT_USER MINIO_ROOT_PASSWORD APP_DOCS_SECRET APP_MEDIA_SECRET
 export MINIO_ENDPOINT="${MINIO_ENDPOINT:-https://s3.localhost}"
 export MC_INSECURE="${MC_INSECURE:-1}"
 export NGINX_HTTP_PORT="${NGINX_HTTP_PORT:-80}"
 export NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-443}"
 
+./minio/init.sh
 ./scripts/smoke-test.sh
 ./tests/test_policies.sh
 ./tests/test_anonymous.sh

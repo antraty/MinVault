@@ -99,7 +99,7 @@ services:
     networks:
       - minvault
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-check-certificate --spider -q https://localhost/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget --no-check-certificate --spider -q https://127.0.0.1/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

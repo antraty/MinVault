@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # Provisioning v0.4. Le script peut être relancé sans recréer ni casser les ressources.
+export PATH="${HOME}/.local/bin:${PATH}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 POLICY_DIR="${ROOT_DIR}/minio/policies"
 MINIO_ENDPOINT="${MINIO_ENDPOINT:-https://s3.localhost}"
@@ -70,11 +71,10 @@ for bucket in documents media logs backups; do
   "${MC[@]}" mb --ignore-existing "$MINIO_ALIAS/$bucket" >/dev/null
   "${MC[@]}" anonymous set none "$MINIO_ALIAS/$bucket" >/dev/null
   "${MC[@]}" version enable "$MINIO_ALIAS/$bucket" >/dev/null
-  # Nettoyage des anciennes versions et des uploads multipart incomplets.
+  # Nettoyage des anciennes versions.
   "${MC[@]}" ilm rule add "$MINIO_ALIAS/$bucket" \
     --noncurrent-expire-days 30 \
-    --expire-delete-marker \
-    --abort-incomplete-mpu-days 7 >/dev/null 2>&1 || \
+    --expire-delete-marker >/dev/null 2>&1 || \
     printf 'Avertissement: règle ILM à vérifier pour %s (syntaxe mc variable selon version).\n' "$bucket" >&2
   printf 'Bucket sécurisé et versionné : %s\n' "$bucket"
 done
@@ -100,3 +100,5 @@ fi
 
 printf '\nProvisioning v0.4 terminé.\n'
 "${MC[@]}" admin info "$MINIO_ALIAS"
+
+
