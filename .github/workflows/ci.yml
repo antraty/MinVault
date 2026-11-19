@@ -23,8 +23,8 @@ jobs:
 
       - name: yamllint
         run: |
-          docker run --rm -v "$PWD:/work" cytopia/yamllint:1.35 \
-            yamllint -d relaxed /work/docker-compose.yml /work/monitoring /work/.github/workflows
+          python3 -m pip install --disable-pip-version-check yamllint
+          yamllint -d relaxed docker-compose.yml monitoring .github/workflows
 
       - name: Hadolint
         run: |
