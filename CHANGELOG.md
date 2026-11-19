@@ -17,6 +17,10 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Réseau Docker dédié et volumes persistants séparés par nœud.
 - Healthchecks et ports de test distincts pour chaque nœud.
 - Procédure de panne, redémarrage et guérison du cluster.
+- Gateway Nginx devant le cluster avec upstream équilibré sur quatre nœuds.
+- Certificats TLS auto-signés de développement pour `s3.localhost` et `console.localhost`.
+- Redirection HTTP vers HTTPS, rate limiting, timeouts et taille maximale d’upload.
+- Ports directs des nœuds MinIO retirés de l’exposition hôte.
 
 ### Limites connues
 
