@@ -18,9 +18,12 @@ jobs:
 
       - name: Install MinIO client
         run: |
-          curl --fail --silent --show-error --location \
-            https://dl.min.io/client/mc/release/linux-amd64/mc \
-            --output /tmp/mc
+          MC_URL="$(curl --fail --silent --show-error \
+            https://api.github.com/repos/minio/mc/releases/latest \
+            | jq -r '.assets[] | select(.name | test("mc\\.linux-amd64\\.RELEASE[^.]*.*$")) | .browser_download_url' \
+            | head -n 1)"
+          test -n "$MC_URL"
+          curl --fail --silent --show-error --location "$MC_URL" --output /tmp/mc
           chmod +x /tmp/mc
           sudo mv /tmp/mc /usr/local/bin/mc
 
