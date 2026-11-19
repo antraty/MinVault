@@ -1,5 +1,7 @@
 x-minio-common: &minio-common
-  image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+  # Les images communautaires minio/minio ne sont plus publiées sur Docker Hub/Quay.
+  # Chainguard fournit une image publique maintenue et compatible MinIO.
+  image: cgr.dev/chainguard/minio:latest
   restart: unless-stopped
   env_file:
     - .env

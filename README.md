@@ -297,7 +297,7 @@ BACKUP_CRON=0 2 * * *
 
 ```yaml
 x-minio-common: &minio-common
-  image: quay.io/minio/minio:latest   # À figer sur une version précise en production
+  image: cgr.dev/chainguard/minio:latest   # Image publique maintenue ; pinner un digest en production
   command: server http://minio{1...4}/data --console-address ":9001"
   environment:
     MINIO_ROOT_USER: ${MINIO_ROOT_USER}

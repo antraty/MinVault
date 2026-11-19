@@ -21,6 +21,7 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Certificats TLS auto-signés de développement pour `s3.localhost` et `console.localhost`.
 - Redirection HTTP vers HTTPS, rate limiting, timeouts et taille maximale d’upload.
 - Ports directs des nœuds MinIO retirés de l’exposition hôte.
+- Image MinIO migrée vers `cgr.dev/chainguard/minio:latest` après le retrait des anciennes images communautaires sur Docker Hub et Quay.
 
 ### Limites connues
 
