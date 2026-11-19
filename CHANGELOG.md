@@ -22,6 +22,9 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Redirection HTTP vers HTTPS, rate limiting, timeouts et taille maximale d’upload.
 - Ports directs des nœuds MinIO retirés de l’exposition hôte.
 - Image MinIO migrée vers `cgr.dev/chainguard/minio:latest` après le retrait des anciennes images communautaires sur Docker Hub et Quay.
+- Buckets `documents`, `media`, `logs` et `backups` avec accès anonyme désactivé.
+- Politiques IAM de moindre privilège et comptes dédiés pour les applications, l’audit et les sauvegardes.
+- Versionnage et règles ILM configurés par un script de provisioning idempotent.
 
 ### Limites connues
 

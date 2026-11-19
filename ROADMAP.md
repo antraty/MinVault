@@ -20,8 +20,8 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 |---------|-------------|-------|----------|----------|--------|
 | v0.1 | **Socle** | MinIO mono-nœud + outils clients | 🔴 | ✅ |
 | v0.2 | **Cluster** | Cluster distribué 4 nœuds (haute disponibilité) | 🔴 | ✅ |
-| v0.3 | **Gateway** | Nginx, TLS, point d'entrée unique | 🔴 | 🚧 |
-| v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | ⏳ |
+| v0.3 | **Gateway** | Nginx, TLS, point d'entrée unique | 🔴 | ✅ |
+| v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | 🚧 |
 | v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ⏳ |
 | v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ⏳ |
 | v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ⏳ |
@@ -304,7 +304,7 @@ MinIO mono-nœud ─▶ Cluster ─▶ Nginx/TLS ─▶ Politiques & versionnage
 | v0.1 | 2026-11-19 | Socle Compose MinIO mono-nœud, volume persistant, configuration `.env.example`, runbook et smoke test initial. |
 | v0.2 | 2026-11-19 | Cluster MinIO distribué à quatre nœuds, erasure coding, réseau dédié, volumes séparés et procédure de failover. |
 | v0.3 | 2026-11-19 | Gateway Nginx, HTTPS local, routage API/console, rate limiting et fermeture des ports directs MinIO. |
-| v0.4 | _à compléter_ | |
+| v0.4 | 2026-11-19 | Buckets sécurisés, utilisateurs dédiés, politiques IAM, versionnage, règles ILM et provisioning idempotent. |
 | v0.5 | _à compléter_ | |
 | v0.6 | _à compléter_ | |
 | v0.7 | _à compléter_ | |

@@ -1,4 +1,4 @@
-# Runbook MinVault — v0.3 Gateway
+# Runbook MinVault — v0.4 Coffre
 
 Ce runbook décrit le cluster MinVault derrière un point d’entrée Nginx : HTTPS obligatoire, certificats locaux de développement, routage S3/console et ports directs MinIO non publiés.
 
@@ -65,6 +65,27 @@ mc alias set --insecure vault https://s3.localhost \
 mc admin info --insecure vault
 ```
 
+## Initialiser les buckets et les comptes dédiés
+
+Après avoir renseigné les secrets applicatifs dans `.env`, charger les variables puis lancer le provisioning :
+
+```bash
+set -a; . ./.env; set +a
+./minio/init.sh
+```
+
+Le script est idempotent : il peut être relancé après une erreur ou un redémarrage. Il crée les buckets `documents`, `media`, `logs` et `backups`, désactive l’accès anonyme, active le versionnage, installe les règles ILM et configure les utilisateurs suivants :
+
+| Utilisateur | Accès |
+|---|---|
+| `app-docs` | lecture/écriture dans `documents` uniquement |
+| `app-media` | lecture/écriture dans `media` uniquement |
+| `app-logs` | écriture dans `logs` uniquement |
+| `auditeur` | lecture des données applicatives |
+| `backup-agent` | lecture des buckets pour la sauvegarde |
+
+Le compte root est réservé à l’administration du cluster. Les secrets ne doivent jamais être ajoutés à Git.
+
 ## Opérations S3 de base
 
 ```bash
@@ -77,6 +98,46 @@ cmp /tmp/minvault-demo.txt /tmp/minvault-restored.txt
 
 # URL pré-signée accessible via le gateway
 mc share download --insecure vault/documents/minvault-demo.txt
+```
+
+## Validation des droits et du versionnage
+
+Vérifier qu’un compte media ne peut pas lire le bucket documents :
+
+```bash
+mc alias set --insecure media-user https://s3.localhost app-media "$APP_MEDIA_SECRET"
+if mc ls --insecure media-user/documents; then
+  echo 'ERREUR: app-media peut lire documents' >&2
+  exit 1
+else
+  echo 'OK: app-media est refusé sur documents'
+fi
+```
+
+Vérifier qu’un objet supprimé reste récupérable grâce au versionnage :
+
+```bash
+printf 'version 1\n' > /tmp/versioned.txt
+mc cp --insecure /tmp/versioned.txt vault/documents/versioned.txt
+printf 'version 2\n' > /tmp/versioned.txt
+mc cp --insecure /tmp/versioned.txt vault/documents/versioned.txt
+mc rm --insecure vault/documents/versioned.txt
+
+# Relever l’identifiant d’une ancienne version dans la sortie suivante.
+mc ls --versions --insecure vault/documents/versioned.txt
+
+# Restaurer une version choisie (remplacer VERSION_ID).
+mc cp --insecure --version-id VERSION_ID \
+  vault/documents/versioned.txt vault/documents/versioned.txt
+```
+
+Vérifier l’absence d’accès anonyme :
+
+```bash
+status=$(curl --insecure --silent --output /dev/null --write-out '%{http_code}' \
+  https://s3.localhost/documents/versioned.txt)
+test "$status" = 403
+echo "OK: accès anonyme refusé ($status)"
 ```
 
 ## Test de panne et routage Nginx
@@ -144,7 +205,7 @@ FORCE_CERT_RENEWAL=1 ./scripts/gen-certs.sh
 docker compose restart nginx
 ```
 
-## Critère de validation v0.3
+## Critère de validation v0.4
 
 La version est validée lorsque :
 
@@ -153,4 +214,7 @@ La version est validée lorsque :
 3. HTTP redirige vers HTTPS ;
 4. les quatre nœuds MinIO ne publient aucun port directement sur l’hôte ;
 5. un fichier peut être envoyé et récupéré via `mc` ou `aws-cli` en HTTPS ;
-6. après l’arrêt d’un nœud, le gateway continue de servir le cluster.
+6. après l’arrêt d’un nœud, le gateway continue de servir le cluster ;
+7. `app-media` est refusé sur `documents` ;
+8. un objet supprimé reste récupérable avec son ancienne version ;
+9. une requête sans identifiants reçoit HTTP 403.
