@@ -226,7 +226,7 @@ Restaurer un snapshot précis :
 docker compose run --rm backup /usr/local/bin/restore.sh SNAPSHOT_ID /restore
 ```
 
-Le test automatisé crée trois fichiers témoins dans `documents`, enregistre leurs checksums, lance une sauvegarde, supprime les témoins sur la source, restaure le dernier snapshot et compare les checksums :
+Le test automatisé crée trois fichiers témoins dans `documents`, enregistre leurs checksums, lance une sauvegarde, supprime les témoins sur la source, restaure le dernier snapshot et compare les checksums. En cas d’échec, il écrit aussi `result=FAIL` dans le statut persistant et retourne un code non nul :
 
 ```bash
 docker compose build backup
@@ -241,7 +241,9 @@ RPO_SECONDS: N
 RESULT: PASS
 ```
 
-Le RTO mesure le temps entre le début du test et la validation des fichiers restaurés. Le RPO mesure ici l’âge des données témoins au moment où le snapshot de test est terminé. Le résultat persistant est disponible dans `/status/restore-test.status`.
+Le RTO mesure le temps entre le début du test et la validation des fichiers restaurés. Le RPO mesure ici l’âge des données témoins au moment où le snapshot de test est terminé. Le résultat persistant est disponible dans `/status/restore-test.status` sous la forme `result=PASS|FAIL rto_seconds=N rpo_seconds=N`.
+
+La validation automatisée est rejouée par GitHub Actions via [`.github/workflows/v06-restore.yml`](../.github/workflows/v06-restore.yml), qui démarre la pile, provisionne les comptes, exécute le test et lance `restic check`.
 
 ## Arrêt et persistance
 

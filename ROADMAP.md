@@ -23,7 +23,7 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 | v0.3 | **Gateway** | Nginx, TLS, point d'entrée unique | 🔴 | ✅ |
 | v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | ✅ |
 | v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ✅ |
-| v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | 🚧 |
+| v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ✅ |
 | v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ⏳ |
 | v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ⏳ |
 | v1.0 | **Stable** | Première version complète et publique | 🔴 | ⏳ |
@@ -155,6 +155,8 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 - Procédure dans `docs/runbook.md`
 
 **Critère de validation :** le test affiche `RESULT: PASS` avec des checksums identiques.
+
+**Validation réalisée :** le workflow GitHub Actions [`v0.6 restore verification`](.github/workflows/v06-restore.yml) démarre la pile Docker Compose, provisionne les buckets, exécute le test de restauration, vérifie `restic check` et contrôle le statut persistant `result=PASS`.
 
 > 🎯 **Jalon : livrable minimal atteint** (cluster, buckets sécurisés, sauvegarde planifiée, test de restauration).
 
@@ -306,7 +308,7 @@ MinIO mono-nœud ─▶ Cluster ─▶ Nginx/TLS ─▶ Politiques & versionnage
 | v0.3 | 2026-11-19 | Gateway Nginx, HTTPS local, routage API/console, rate limiting et fermeture des ports directs MinIO. |
 | v0.4 | 2026-11-19 | Buckets sécurisés, utilisateurs dédiés, politiques IAM, versionnage, règles ILM et provisioning idempotent. |
 | v0.5 | 2026-11-19 | Cible MinIO indépendante, synchronisation rclone, dépôt restic chiffré, rétention, check, cron et statut de run. |
-| v0.6 | 2026-11-19 | Restauration manuelle, test témoins/checksums, destruction contrôlée et mesures RTO/RPO. |
+| v0.6 | 2026-11-19 | Restauration manuelle, test témoins/checksums, destruction contrôlée, mesures RTO/RPO, statut PASS/FAIL persistant et validation CI Docker. |
 | v0.7 | _à compléter_ | |
 | v0.8 | _à compléter_ | |
 | v1.0 | _à compléter_ | |

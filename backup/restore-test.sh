@@ -7,13 +7,32 @@ WITNESS_DIR="$TEST_ROOT/witness"
 RESTORE_DIR="$TEST_ROOT/restored"
 STATUS_DIR="${STATUS_DIR:-/status}"
 STARTED_AT="$(date +%s)"
+WITNESS_CREATED_AT=""
 RESULT="FAIL"
+RTO_SECONDS=""
+RPO_SECONDS=""
+
+write_status() {
+  local finished_at
+  finished_at="$(date +%s)"
+  if [[ -z "$RTO_SECONDS" ]]; then
+    RTO_SECONDS=$((finished_at - STARTED_AT))
+  fi
+  if [[ -z "$RPO_SECONDS" ]]; then
+    RPO_SECONDS="unknown"
+  fi
+  mkdir -p "$STATUS_DIR"
+  printf '%s result=%s rto_seconds=%s rpo_seconds=%s\n' \
+    "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$RESULT" "$RTO_SECONDS" "$RPO_SECONDS" \
+    > "$STATUS_DIR/restore-test.status"
+  if [[ "$RESULT" != "PASS" ]]; then
+    printf 'RESULT: FAIL\n' >&2
+  fi
+}
 
 cleanup() {
+  write_status
   rm -rf "$TEST_ROOT"
-  if [[ "$RESULT" != "PASS" ]]; then
-    printf 'RESULT: FAIL\n'
-  fi
 }
 trap cleanup EXIT
 
@@ -41,7 +60,7 @@ RPO_SECONDS=$((BACKUP_FINISHED_AT - WITNESS_CREATED_AT))
 printf 'Destruction contrôlée des données témoins sur la source\n'
 rclone delete "vault:documents/$PREFIX"
 if rclone lsf "vault:documents/$PREFIX" | grep -q .; then
-  echo 'Erreur: les témoins n’ont pas été supprimés de la source.' >&2
+  printf 'Erreur: les témoins n’ont pas été supprimés de la source.\n' >&2
   exit 1
 fi
 
@@ -52,21 +71,18 @@ if [[ ! -d "$RESTORED_WITNESS_DIR" ]]; then
   printf 'Erreur: répertoire restauré absent: %s\n' "$RESTORED_WITNESS_DIR" >&2
   exit 1
 fi
-( cd "$RESTORED_WITNESS_DIR" && sha256sum ./* | sed "s#  #  #" | sort ) > "$TEST_ROOT/checksums.after"
+( cd "$RESTORED_WITNESS_DIR" && sha256sum ./* | sort ) > "$TEST_ROOT/checksums.after"
 
 printf 'Comparaison des checksums\n'
 if ! diff -u "$TEST_ROOT/checksums.before" "$TEST_ROOT/checksums.after"; then
-  echo 'Erreur: checksums différents après restauration.' >&2
+  printf 'Erreur: checksums différents après restauration.\n' >&2
   exit 1
 fi
 
 FINISHED_AT="$(date +%s)"
 RTO_SECONDS=$((FINISHED_AT - STARTED_AT))
-cat > "$STATUS_DIR/restore-test.status" <<EOF
-$(date -u '+%Y-%m-%dT%H:%M:%SZ') result=PASS rto_seconds=$RTO_SECONDS rpo_seconds=$RPO_SECONDS
-EOF
-
 RESULT="PASS"
+
 printf 'RTO_SECONDS: %s\n' "$RTO_SECONDS"
 printf 'RPO_SECONDS: %s\n' "$RPO_SECONDS"
 printf 'RESULT: PASS\n'

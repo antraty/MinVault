@@ -89,7 +89,7 @@ Mettre en place un stockage compatible S3 auto-hébergé avec politiques d'accè
 - ✅ **rclone** pour la synchronisation vers un second site/stockage (autre MinIO, disque, cloud)
 - ✅ **Politique de rétention** (`--keep-daily 7 --keep-weekly 4 --keep-monthly 6`)
 - ✅ **Vérification d'intégrité** (`restic check`)
-- ✅ **Test de restauration automatisé** avec comparaison de checksums
+- ✅ **Test de restauration automatisé** avec comparaison de checksums, mesures RTO/RPO et statut PASS/FAIL persistant
 
 ### Observabilité
 - ✅ **Métriques Prometheus** (santé du cluster, capacité, requêtes, latence)
@@ -518,7 +518,18 @@ scrape_configs:
 | Restauration | `backup/restore-test.sh` | Checksums identiques après restauration |
 | Tolérance aux pannes | `tests/test_failover.*` | Arrêt d'un nœud → service toujours disponible |
 
-Exécution : `make test` (ou `./scripts/run-tests.sh`). La CI GitHub Actions exécute le lint (shellcheck, yamllint, hadolint) et les tests de base.
+Exécution du test de restauration v0.6 :
+
+```bash
+docker compose build backup
+docker compose run --rm backup /usr/local/bin/restore-test.sh
+# attendu : RESULT: PASS
+
+# Vérification complémentaire du dépôt restic
+docker compose run --rm backup restic check
+```
+
+Le workflow GitHub Actions [`.github/workflows/v06-restore.yml`](.github/workflows/v06-restore.yml) exécute cette validation dans un runner Docker, vérifie les checksums, `restic check` et le statut persistant `result=PASS`.
 
 ---
 

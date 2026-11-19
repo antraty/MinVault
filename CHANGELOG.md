@@ -33,8 +33,8 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 
 ### Limites connues
 
-- La validation avec Docker reste à effectuer sur une machine disposant de Docker Compose v2.
-- Les buckets, politiques, versionnage, sauvegardes et supervision seront ajoutés dans les prochaines étapes de la roadmap.
+- La validation Docker complète est exécutée par le workflow GitHub Actions `.github/workflows/v06-restore.yml`; une exécution locale reste possible avec Docker Compose v2.
+- La supervision Prometheus/Grafana, les tests élargis et la documentation OpenAPI restent planifiés pour v0.7/v0.8.
 
 ## [0.1.0] - À venir
 
