@@ -1,0 +1,2 @@
+# Exemple BusyBox crond — la valeur réelle est générée depuis BACKUP_CRON
+0 2 * * * /usr/local/bin/backup.sh

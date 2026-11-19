@@ -176,6 +176,42 @@ Ce test valide qu’un nœud peut être arrêté sans interrompre l’accès via
    mc admin info --insecure vault
    ```
 
+## Sauvegarde planifiée v0.5
+
+La cible `minio-backup` est une instance MinIO séparée du cluster principal. Le service `backup` synchronise les buckets applicatifs avec `rclone`, crée un dépôt restic chiffré et applique la rétention `7 jours / 4 semaines / 6 mois`.
+
+Après avoir renseigné `BACKUP_MINIO_ROOT_PASSWORD` et `RESTIC_PASSWORD` dans `.env` :
+
+```bash
+docker compose build backup
+docker compose up -d minio-backup backup
+```
+
+La planification par défaut est quotidienne à 02:00 (`BACKUP_CRON`). Pour lancer une sauvegarde immédiatement :
+
+```bash
+docker compose run --rm backup /usr/local/bin/backup.sh
+```
+
+Consulter le statut et les logs :
+
+```bash
+docker compose exec backup cat /status/last_backup.status
+docker compose exec backup cat /status/last_backup.prom
+docker compose exec backup tail -n 100 /var/log/minvault/backup.log
+```
+
+Le fichier `last_backup.prom` expose notamment `minvault_backup_success`, `minvault_backup_timestamp_seconds` et `minvault_backup_duration_seconds`. Un code de retour non nul indique un échec exploitable par cron ou une supervision ultérieure.
+
+Vérifier manuellement le dépôt restic :
+
+```bash
+docker compose run --rm backup restic snapshots
+docker compose run --rm backup restic check
+```
+
+La première exécution initialise le dépôt. Les exécutions suivantes sont incrémentales grâce à la déduplication restic.
+
 ## Arrêt et persistance
 
 ```bash
@@ -205,7 +241,7 @@ FORCE_CERT_RENEWAL=1 ./scripts/gen-certs.sh
 docker compose restart nginx
 ```
 
-## Critère de validation v0.4
+## Critère de validation v0.5
 
 La version est validée lorsque :
 
@@ -217,4 +253,8 @@ La version est validée lorsque :
 6. après l’arrêt d’un nœud, le gateway continue de servir le cluster ;
 7. `app-media` est refusé sur `documents` ;
 8. un objet supprimé reste récupérable avec son ancienne version ;
-9. une requête sans identifiants reçoit HTTP 403.
+9. une requête sans identifiants reçoit HTTP 403 ;
+10. le dépôt restic est chiffré et contient un snapshot `minvault` ;
+11. `restic check` termine avec succès ;
+12. `last_backup.status` indique `success=1` après un run ;
+13. une seconde exécution réutilise les données déjà présentes grâce à rclone/restic.

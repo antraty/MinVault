@@ -49,6 +49,30 @@ services:
     volumes:
       - minio4_data:/data
 
+  minio-backup:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: minvault-minio-backup
+    hostname: minio-backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${BACKUP_MINIO_ROOT_USER:?BACKUP_MINIO_ROOT_USER doit être défini dans .env}
+      MINIO_ROOT_PASSWORD: ${BACKUP_MINIO_ROOT_PASSWORD:?BACKUP_MINIO_ROOT_PASSWORD doit être défini dans .env}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_backup_data:/data
+    networks:
+      - minvault
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
   nginx:
     image: nginx:1.27.3-alpine
     container_name: minvault-nginx
@@ -79,6 +103,47 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  backup:
+    build:
+      context: ./backup
+    image: minvault-backup:0.5
+    container_name: minvault-backup
+    restart: unless-stopped
+    depends_on:
+      minio1:
+        condition: service_healthy
+      minio-backup:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      BACKUP_AGENT_SECRET: ${BACKUP_AGENT_SECRET:?BACKUP_AGENT_SECRET doit être défini dans .env}
+      RCLONE_CONFIG_VAULT_TYPE: s3
+      RCLONE_CONFIG_VAULT_PROVIDER: Minio
+      RCLONE_CONFIG_VAULT_ENV_AUTH: "false"
+      RCLONE_CONFIG_VAULT_ACCESS_KEY_ID: backup-agent
+      RCLONE_CONFIG_VAULT_SECRET_ACCESS_KEY: ${BACKUP_AGENT_SECRET:?BACKUP_AGENT_SECRET doit être défini dans .env}
+      RCLONE_CONFIG_VAULT_ENDPOINT: http://minio1:9000
+      RCLONE_CONFIG_VAULT_REGION: us-east-1
+      RESTIC_REPOSITORY: s3:http://minio-backup:9000/restic-repo
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?RESTIC_PASSWORD est requis dans .env}
+      AWS_S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: ${BACKUP_MINIO_ROOT_USER:?BACKUP_MINIO_ROOT_USER doit être défini dans .env}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_MINIO_ROOT_PASSWORD:?BACKUP_MINIO_ROOT_PASSWORD doit être défini dans .env}
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+      RESTIC_KEEP_DAILY: ${RESTIC_KEEP_DAILY:-7}
+      RESTIC_KEEP_WEEKLY: ${RESTIC_KEEP_WEEKLY:-4}
+      RESTIC_KEEP_MONTHLY: ${RESTIC_KEEP_MONTHLY:-6}
+    volumes:
+      - backup_staging:/staging
+      - backup_status:/status
+      - backup_logs:/var/log/minvault
+      - backup_lock:/run/minvault
+    networks:
+      - minvault
+    security_opt:
+      - no-new-privileges:true
+
 networks:
   minvault:
     name: minvault_network
@@ -93,3 +158,13 @@ volumes:
     name: minvault_minio3_data
   minio4_data:
     name: minvault_minio4_data
+  minio_backup_data:
+    name: minvault_minio_backup_data
+  backup_staging:
+    name: minvault_backup_staging
+  backup_status:
+    name: minvault_backup_status
+  backup_logs:
+    name: minvault_backup_logs
+  backup_lock:
+    name: minvault_backup_lock

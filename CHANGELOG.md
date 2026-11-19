@@ -25,6 +25,9 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Buckets `documents`, `media`, `logs` et `backups` avec accès anonyme désactivé.
 - Politiques IAM de moindre privilège et comptes dédiés pour les applications, l’audit et les sauvegardes.
 - Versionnage et règles ILM configurés par un script de provisioning idempotent.
+- Cible MinIO indépendante `minio-backup` avec volume séparé.
+- Service `backup` basé sur rclone/restic, dépôt chiffré, rétention 7/4/6 et contrôle d’intégrité.
+- Planification cron configurable et statut de dernière sauvegarde au format texte/Prometheus.
 
 ### Limites connues
 
