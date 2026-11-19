@@ -6,6 +6,8 @@ PREFIX=".minvault-restore-test"
 WITNESS_DIR="$TEST_ROOT/witness"
 RESTORE_DIR="$TEST_ROOT/restored"
 STATUS_DIR="${STATUS_DIR:-/status}"
+TEST_RCLONE_CONFIG="$TEST_ROOT/rclone-test.conf"
+TEST_ENDPOINT="${TEST_ENDPOINT:-http://minio1:9000}"
 STARTED_AT="$(date +%s)"
 WITNESS_CREATED_AT=""
 RESULT="FAIL"
@@ -39,8 +41,19 @@ trap cleanup EXIT
 : "${RESTIC_REPOSITORY:?RESTIC_REPOSITORY est requis}"
 : "${RESTIC_PASSWORD:?RESTIC_PASSWORD est requis}"
 : "${BACKUP_AGENT_SECRET:?BACKUP_AGENT_SECRET est requis}"
+: "${APP_DOCS_SECRET:?APP_DOCS_SECRET est requis pour créer les témoins}"
 
 mkdir -p "$WITNESS_DIR" "$RESTORE_DIR" "$STATUS_DIR"
+cat > "$TEST_RCLONE_CONFIG" <<EOF
+[test]
+type = s3
+provider = Minio
+env_auth = false
+access_key_id = app-docs
+secret_access_key = ${APP_DOCS_SECRET}
+endpoint = ${TEST_ENDPOINT}
+region = us-east-1
+EOF
 
 printf 'Création des données témoins\n'
 printf 'MinVault restore test\n' > "$WITNESS_DIR/hello.txt"
@@ -50,7 +63,7 @@ printf 'unicode: sauvegarde vérifiée\n' > "$WITNESS_DIR/unicode.txt"
 WITNESS_CREATED_AT="$(date +%s)"
 
 printf 'Upload des témoins dans le bucket documents\n'
-rclone copy "$WITNESS_DIR" "vault:documents/$PREFIX" --checksum
+rclone --config "$TEST_RCLONE_CONFIG" copy "$WITNESS_DIR" "test:documents/$PREFIX" --checksum
 
 printf 'Exécution d’une sauvegarde complète\n'
 /usr/local/bin/backup.sh
@@ -58,8 +71,8 @@ BACKUP_FINISHED_AT="$(date +%s)"
 RPO_SECONDS=$((BACKUP_FINISHED_AT - WITNESS_CREATED_AT))
 
 printf 'Destruction contrôlée des données témoins sur la source\n'
-rclone delete "vault:documents/$PREFIX"
-if rclone lsf "vault:documents/$PREFIX" | grep -q .; then
+rclone --config "$TEST_RCLONE_CONFIG" delete "test:documents/$PREFIX"
+if rclone --config "$TEST_RCLONE_CONFIG" lsf "test:documents/$PREFIX" | grep -q .; then
   printf 'Erreur: les témoins n’ont pas été supprimés de la source.\n' >&2
   exit 1
 fi
