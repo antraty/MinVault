@@ -11,5 +11,5 @@ mc "${MC_FLAGS[@]}" cp /tmp/version-2.txt "docs-user/documents/$key" >/dev/null
 versions="$(mc "${MC_FLAGS[@]}" ls --versions "docs-user/documents/$key")"
 count="$(printf '%s\n' "$versions" | grep -c "$key" || true)"
 [[ "$count" -ge 2 ]] || fail "au moins deux versions attendues, obtenu $count"
-mc "${MC_FLAGS[@]}" rm --versions "docs-user/documents/$key" >/dev/null
+mc "${MC_FLAGS[@]}" rm --force --versions "docs-user/documents/$key" >/dev/null
 ok 'versionnage conserve les anciennes versions'
