@@ -212,6 +212,27 @@ docker compose run --rm backup restic check
 
 La première exécution initialise le dépôt. Les exécutions suivantes sont incrémentales grâce à la déduplication restic.
 
+## Supervision v0.7
+
+Prometheus collecte les métriques du cluster sur `/minio/v2/metrics/cluster` et le service `backup-exporter` relaie le fichier `/status/last_backup.prom` vers `/metrics`.
+
+```bash
+docker compose up -d backup-exporter prometheus grafana
+curl -fsS http://localhost:9090/-/ready
+curl -fsS http://localhost:3000/api/health
+curl -fsS http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job, health, instance}'
+curl -fsS 'http://localhost:9090/api/v1/rules?type=alert' | jq '.data.groups[].rules[] | {name, state}'
+```
+
+Le dashboard **MinVault Overview** est provisionné automatiquement dans Grafana. Les règles principales sont : `MinIOInstanceDown`, `MinIOClusterCapacityLow`, `MinIOBackupFailed` et `MinIOBackupStale`. Une sauvegarde absente depuis plus de 26 heures déclenche `MinIOBackupStale`.
+
+Pour vérifier la fraîcheur de la métrique de sauvegarde :
+
+```bash
+docker compose run --rm backup /usr/local/bin/backup.sh
+docker compose exec prometheus wget -qO- http://backup-exporter:9101/metrics
+```
+
 ## Restauration et preuve v0.6
 
 Restaurer manuellement le dernier snapshot dans `/restore` :

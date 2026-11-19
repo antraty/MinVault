@@ -24,7 +24,7 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 | v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | ✅ |
 | v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ✅ |
 | v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ✅ |
-| v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ⏳ |
+| v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | 🚧 |
 | v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ⏳ |
 | v1.0 | **Stable** | Première version complète et publique | 🔴 | ⏳ |
 | v1.1 | **Forteresse** | Sécurité avancée (Object Lock, chiffrement, audit) | 🟢 | ⏳ |
@@ -178,8 +178,12 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 
 **Livrables techniques**
 - `monitoring/prometheus.yml`, `monitoring/alerts.yml`, `monitoring/grafana/`
+- `monitoring/backup-exporter/`
+- `.github/workflows/v07-monitoring.yml`
 
 **Critère de validation :** arrêter un nœud déclenche l'alerte correspondante.
+
+**État actuel :** Prometheus, Grafana, le dashboard provisionné, l’exporter du statut de sauvegarde et les quatre règles d’alerte sont implémentés. La validation d’intégration Docker est exécutée par `.github/workflows/v07-monitoring.yml`.
 
 ---
 

@@ -8,6 +8,7 @@ x-minio-common: &minio-common
   environment:
     MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER doit être défini dans .env}
     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD doit être défini dans .env}
+    MINIO_PROMETHEUS_AUTH_TYPE: ${MINIO_PROMETHEUS_AUTH_TYPE:-public}
   command: server http://minio{1...4}/data --console-address ":9001"
   networks:
     - minvault
@@ -147,6 +148,64 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  backup-exporter:
+    build:
+      context: ./monitoring/backup-exporter
+    image: minvault-backup-exporter:0.7
+    container_name: minvault-backup-exporter
+    restart: unless-stopped
+    depends_on:
+      backup:
+        condition: service_started
+    volumes:
+      - backup_status:/status:ro
+    networks:
+      - minvault
+    security_opt:
+      - no-new-privileges:true
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: minvault-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - minvault
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: minvault-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD doit être défini dans .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_DOMAIN: ${GRAFANA_SERVER_DOMAIN:-localhost}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - minvault
+    security_opt:
+      - no-new-privileges:true
+
 networks:
   minvault:
     name: minvault_network
@@ -171,3 +230,7 @@ volumes:
     name: minvault_backup_logs
   backup_lock:
     name: minvault_backup_lock
+  prometheus_data:
+    name: minvault_prometheus_data
+  grafana_data:
+    name: minvault_grafana_data

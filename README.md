@@ -93,8 +93,8 @@ Mettre en place un stockage compatible S3 auto-hébergé avec politiques d'accè
 
 ### Observabilité
 - ✅ **Métriques Prometheus** (santé du cluster, capacité, requêtes, latence)
-- ✅ **Dashboard Grafana** (optionnel mais recommandé)
-- ✅ **Alertes** (nœud hors ligne, disque presque plein, échec de sauvegarde)
+- ✅ **Dashboard Grafana** provisionné automatiquement
+- ✅ **Alertes** (nœud hors ligne, capacité faible, sauvegarde ancienne ou en échec)
 
 ---
 
@@ -177,7 +177,17 @@ Le script `restore-test.sh` :
 5. compare les checksums et affiche **PASS / FAIL**.
 
 ### 5.7 La supervision
-MinIO expose ses métriques sur `/minio/v2/metrics/cluster`. Prometheus les collecte ; des règles d'alerte signalent : nœud injoignable, capacité > 80 %, sauvegarde absente depuis > 26 h.
+MinIO expose ses métriques sur `/minio/v2/metrics/cluster`. Prometheus les collecte depuis les quatre nœuds ; des règles d’alerte signalent : nœud injoignable, capacité libre inférieure à 20 %, dernière sauvegarde échouée ou sauvegarde absente depuis plus de 26 h.
+
+La stack de supervision est démarrée avec `docker compose up -d prometheus grafana backup-exporter`. Grafana provisionne automatiquement la datasource Prometheus et le dashboard **MinVault Overview**.
+
+| Service | URL par défaut | Rôle |
+|---------|----------------|------|
+| Prometheus | `http://localhost:9090` | métriques, règles et alertes |
+| Grafana | `http://localhost:3000` | dashboard et état opérationnel |
+| backup-exporter | réseau Docker `:9101/metrics` | expose le statut de sauvegarde |
+
+Le mot de passe administrateur Grafana est défini par `GRAFANA_ADMIN_PASSWORD` dans `.env` et n’est jamais commité.
 
 ---
 
@@ -517,6 +527,7 @@ scrape_configs:
 | Sauvegarde | `tests/test_backup.*` | Snapshot créé et valide |
 | Restauration | `backup/restore-test.sh` | Checksums identiques après restauration |
 | Tolérance aux pannes | `tests/test_failover.*` | Arrêt d'un nœud → service toujours disponible |
+| Supervision | `.github/workflows/v07-monitoring.yml` | 4 cibles MinIO, exporter backup, Grafana et règles chargées |
 
 Exécution du test de restauration v0.6 :
 
@@ -530,6 +541,16 @@ docker compose run --rm backup restic check
 ```
 
 Le workflow GitHub Actions [`.github/workflows/v06-restore.yml`](.github/workflows/v06-restore.yml) exécute cette validation dans un runner Docker, vérifie les checksums, `restic check` et le statut persistant `result=PASS`.
+
+Validation de la supervision :
+
+```bash
+docker compose up -d backup-exporter prometheus grafana
+curl -fsS http://localhost:9090/-/ready
+curl -fsS http://localhost:3000/api/health
+```
+
+Le workflow [`.github/workflows/v07-monitoring.yml`](.github/workflows/v07-monitoring.yml) vérifie automatiquement les quatre cibles MinIO, la métrique `minvault_backup_success`, Grafana et les règles `MinIOInstanceDown` / `MinIOBackupStale`.
 
 ---
 

@@ -1,0 +1,43 @@
+groups:
+  - name: minvault-health
+    interval: 30s
+    rules:
+      - alert: MinIOInstanceDown
+        expr: up{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance MinIO indisponible"
+          description: "L’instance {{ $labels.instance }} ne répond plus depuis plus de 2 minutes."
+
+      - alert: MinIOClusterCapacityLow
+        expr: |
+          (
+            minio_cluster_capacity_usable_free_bytes
+            / minio_cluster_capacity_usable_total_bytes
+          ) < 0.20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Capacité MinIO bientôt saturée"
+          description: "Il reste moins de 20 % de capacité utilisable dans le cluster MinIO."
+
+      - alert: MinIOBackupFailed
+        expr: minvault_backup_success == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "La dernière sauvegarde MinVault a échoué"
+          description: "Le dernier run de sauvegarde indique success=0."
+
+      - alert: MinIOBackupStale
+        expr: time() - minvault_backup_timestamp_seconds > 93600
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sauvegarde MinVault trop ancienne"
+          description: "Aucune sauvegarde réussie n’a été enregistrée depuis plus de 26 heures."

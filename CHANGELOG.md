@@ -30,6 +30,10 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Planification cron configurable et statut de dernière sauvegarde au format texte/Prometheus.
 - Restauration manuelle d’un snapshot via `restore.sh`.
 - Test automatisé de restauration avec données témoins, checksums, RTO/RPO et résultat `PASS/FAIL`.
+- Stack de supervision Prometheus avec collecte des quatre nœuds MinIO.
+- Règles d’alerte pour nœud indisponible, capacité faible et sauvegarde absente ou en échec.
+- Dashboard Grafana provisionné automatiquement avec la datasource Prometheus.
+- Exporter HTTP du statut de sauvegarde pour rendre `last_backup.prom` exploitable par Prometheus.
 
 ### Limites connues
 

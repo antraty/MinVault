@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: minvault
+    environment: local
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: minio
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets:
+          - minio1:9000
+          - minio2:9000
+          - minio3:9000
+          - minio4:9000
+        labels:
+          service: minio
+
+  - job_name: backup
+    static_configs:
+      - targets:
+          - backup-exporter:9101
+        labels:
+          service: backup
