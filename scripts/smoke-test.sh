@@ -22,5 +22,5 @@ printf 'OK: gateway HTTPS accessible\n'
 
 for service in minio1 minio2 minio3 minio4 nginx; do
   docker compose ps --status running --services | grep -qx "$service"
-  printf 'OK: service %s en cours d’exécution\n' "$service"
+  printf "OK: service %s en cours d'exécution\n" "$service"
 done

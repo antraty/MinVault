@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 : "${MINIO_ROOT_USER:?MINIO_ROOT_USER est requis}"
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD est requis}"
 : "${APP_DOCS_SECRET:?APP_DOCS_SECRET est requis}"

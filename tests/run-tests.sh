@@ -22,5 +22,5 @@ trap 'docker compose start minio1 >/dev/null' EXIT
 sleep 5
 mc --insecure cp "${ROOT_DIR}/README.md" vault/documents/v08-failover-test.md >/dev/null
 mc --insecure stat vault/documents/v08-failover-test.md >/dev/null
-ok='OK: failover MinIO conserve lecture/écriture pendant l’arrêt d’un nœud'
+ok="OK: failover MinIO conserve lecture/ecriture pendant l'arret d'un nœud"
 printf '%s\n' "$ok"

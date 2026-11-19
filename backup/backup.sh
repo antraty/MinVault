@@ -46,7 +46,7 @@ trap 'write_status 0' ERR
 : "${BACKUP_AGENT_SECRET:?BACKUP_AGENT_SECRET est requis}"
 
 printf '\n[%s] Début de la sauvegarde MinVault\n' "$(now)"
-rm -rf "$STAGING_DIR"/*
+rm -rf "${STAGING_DIR:?}"/*
 
 for bucket in documents media logs; do
   printf 'Synchronisation rclone du bucket %s\n' "$bucket"

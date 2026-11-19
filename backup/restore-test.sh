@@ -65,7 +65,7 @@ WITNESS_CREATED_AT="$(date +%s)"
 printf 'Upload des témoins dans le bucket documents\n'
 rclone --config "$TEST_RCLONE_CONFIG" copy "$WITNESS_DIR" "test:documents/$PREFIX" --checksum
 
-printf 'Exécution d’une sauvegarde complète\n'
+printf "Exécution d'une sauvegarde complète\n"
 /usr/local/bin/backup.sh
 BACKUP_FINISHED_AT="$(date +%s)"
 RPO_SECONDS=$((BACKUP_FINISHED_AT - WITNESS_CREATED_AT))
@@ -73,7 +73,7 @@ RPO_SECONDS=$((BACKUP_FINISHED_AT - WITNESS_CREATED_AT))
 printf 'Destruction contrôlée des données témoins sur la source\n'
 rclone --config "$TEST_RCLONE_CONFIG" delete "test:documents/$PREFIX"
 if rclone --config "$TEST_RCLONE_CONFIG" lsf "test:documents/$PREFIX" | grep -q .; then
-  printf 'Erreur: les témoins n’ont pas été supprimés de la source.\n' >&2
+  printf "Erreur: les témoins n'ont pas été supprimés de la source.\n" >&2
   exit 1
 fi
 
