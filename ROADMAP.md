@@ -25,7 +25,7 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 | v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ✅ |
 | v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ✅ |
 | v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ✅ |
-| v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ⏳ |
+| v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ✅ |
 | v1.0 | **Stable** | Première version complète et publique | 🔴 | ⏳ |
 | v1.1 | **Forteresse** | Sécurité avancée (Object Lock, chiffrement, audit) | 🟢 | ⏳ |
 | v1.2 | **Miroir** | Réplication et sauvegarde hors site | 🟢 | ⏳ |
@@ -203,6 +203,8 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 
 **Critère de validation :** `make test` exécute toute la suite avec succès ; la CI est verte.
 
+**Validation réalisée :** la suite `make test` et les contrôles ShellCheck, yamllint, Hadolint, Compose et OpenAPI sont verts dans les workflows GitHub Actions [`v0.8 quality integration`](https://github.com/antraty/MinVault/actions/runs/44511009196) et [`quality checks`](https://github.com/antraty/MinVault/actions/runs/44511009219). Le contrat OpenAPI 3 couvre les opérations S3 utilisées, la santé MinIO et les métriques Prometheus.
+
 ---
 
 ## 🔴 v1.0 — Stable : première version publique
@@ -314,7 +316,7 @@ MinIO mono-nœud ─▶ Cluster ─▶ Nginx/TLS ─▶ Politiques & versionnage
 | v0.5 | 2026-11-19 | Cible MinIO indépendante, synchronisation rclone, dépôt restic chiffré, rétention, check, cron et statut de run. |
 | v0.6 | 2026-11-19 | Restauration manuelle, test témoins/checksums, destruction contrôlée, mesures RTO/RPO, statut PASS/FAIL persistant et validation CI Docker. |
 | v0.7 | 2026-11-19 | Prometheus, Grafana, dashboard provisionné, exporter du statut de sauvegarde, règles d’alerte et validation CI Docker. |
-| v0.8 | _à compléter_ | |
+| v0.8 | 2026-11-19 | Makefile, suite de tests reproductibles, CI ShellCheck/yamllint/Hadolint/Compose/OpenAPI et contrat OpenAPI 3 validés par GitHub Actions. |
 | v1.0 | _à compléter_ | |
 
 > 💡 Chaque version doit correspondre à un **tag Git** (`v0.1.0`, `v0.2.0`…) et à une entrée dans un fichier `CHANGELOG.md` (format *Keep a Changelog*).

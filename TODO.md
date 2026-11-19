@@ -156,7 +156,7 @@ Au moins **une** contribution externe, avec preuve.
 | Test de restauration réussi *(ROADMAP v0.6)* | ✅ |
 | Supervision Prometheus/Grafana et alertes *(ROADMAP v0.7)* | ✅ |
 | Dépôt Git public + README + Docker Compose | ☐ |
-| Tests de base + documentation d'API *(ROADMAP v0.8)* | ☐ |
+| Tests de base + documentation d'API *(ROADMAP v0.8)* | ✅ |
 | Fiche de veille (2 pages, ≥ 3 outils, sources) | ☐ |
 | Article / tutoriel publié | ☐ |
 | Vidéo de démonstration (3–5 min) | ☐ |

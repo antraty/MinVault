@@ -34,11 +34,15 @@ Le format suit les principes de [Keep a Changelog](https://keepachangelog.com/fr
 - Règles d’alerte pour nœud indisponible, capacité faible et sauvegarde absente ou en échec.
 - Dashboard Grafana provisionné automatiquement avec la datasource Prometheus.
 - Exporter HTTP du statut de sauvegarde pour rendre `last_backup.prom` exploitable par Prometheus.
+- Makefile avec commandes de cycle de vie, sauvegarde, restauration et validation.
+- Suite de tests Bash reproductibles pour smoke test, politiques, accès anonyme, versionnage, sauvegarde, restauration et failover.
+- Workflows GitHub Actions v0.8 pour lint ShellCheck/yamllint/Hadolint, validation Compose, lint OpenAPI et intégration Docker.
+- Contrat OpenAPI 3 pour les opérations S3 utilisées, les endpoints de santé MinIO et les métriques Prometheus.
 
 ### Limites connues
 
 - La validation Docker complète est exécutée par le workflow GitHub Actions `.github/workflows/v06-restore.yml`; une exécution locale reste possible avec Docker Compose v2.
-- La supervision Prometheus/Grafana, les tests élargis et la documentation OpenAPI restent planifiés pour v0.7/v0.8.
+- La validation Docker complète dépend de GitHub Actions ou d'un environnement local équipé de Docker Compose v2.
 
 ## [0.1.0] - À venir
 
