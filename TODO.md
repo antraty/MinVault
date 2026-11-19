@@ -154,6 +154,7 @@ Au moins **une** contribution externe, avec preuve.
 | Buckets sécurisés, versionnage *(ROADMAP v0.4)* | ☐ |
 | Sauvegarde planifiée *(ROADMAP v0.5)* | ☐ |
 | Test de restauration réussi *(ROADMAP v0.6)* | ✅ |
+| Supervision Prometheus/Grafana et alertes *(ROADMAP v0.7)* | ✅ |
 | Dépôt Git public + README + Docker Compose | ☐ |
 | Tests de base + documentation d'API *(ROADMAP v0.8)* | ☐ |
 | Fiche de veille (2 pages, ≥ 3 outils, sources) | ☐ |

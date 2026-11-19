@@ -40,6 +40,7 @@ jobs:
           APP_MEDIA_SECRET=app-media-password-123
           APP_LOGS_SECRET=app-logs-password-123
           AUDITOR_SECRET=auditor-password-123
+          GRAFANA_ADMIN_PASSWORD=grafana-password-123
           NGINX_HTTP_PORT=8080
           NGINX_HTTPS_PORT=8443
           EOF

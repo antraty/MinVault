@@ -24,7 +24,7 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 | v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | ✅ |
 | v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ✅ |
 | v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ✅ |
-| v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | 🚧 |
+| v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ✅ |
 | v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ⏳ |
 | v1.0 | **Stable** | Première version complète et publique | 🔴 | ⏳ |
 | v1.1 | **Forteresse** | Sécurité avancée (Object Lock, chiffrement, audit) | 🟢 | ⏳ |
@@ -183,7 +183,7 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 
 **Critère de validation :** arrêter un nœud déclenche l'alerte correspondante.
 
-**État actuel :** Prometheus, Grafana, le dashboard provisionné, l’exporter du statut de sauvegarde et les quatre règles d’alerte sont implémentés. La validation d’intégration Docker est exécutée par `.github/workflows/v07-monitoring.yml`.
+**Validation réalisée :** Prometheus, Grafana, le dashboard provisionné, l’exporter du statut de sauvegarde et les quatre règles d’alerte sont implémentés. Le workflow Docker [v0.7 monitoring verification](https://github.com/antraty/MinVault/actions/runs/44509447568) a validé les quatre cibles MinIO, `minvault_backup_success`, Grafana et les règles d’alerte.
 
 ---
 
@@ -313,7 +313,7 @@ MinIO mono-nœud ─▶ Cluster ─▶ Nginx/TLS ─▶ Politiques & versionnage
 | v0.4 | 2026-11-19 | Buckets sécurisés, utilisateurs dédiés, politiques IAM, versionnage, règles ILM et provisioning idempotent. |
 | v0.5 | 2026-11-19 | Cible MinIO indépendante, synchronisation rclone, dépôt restic chiffré, rétention, check, cron et statut de run. |
 | v0.6 | 2026-11-19 | Restauration manuelle, test témoins/checksums, destruction contrôlée, mesures RTO/RPO, statut PASS/FAIL persistant et validation CI Docker. |
-| v0.7 | _à compléter_ | |
+| v0.7 | 2026-11-19 | Prometheus, Grafana, dashboard provisionné, exporter du statut de sauvegarde, règles d’alerte et validation CI Docker. |
 | v0.8 | _à compléter_ | |
 | v1.0 | _à compléter_ | |
 
