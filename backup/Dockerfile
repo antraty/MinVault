@@ -1,5 +1,6 @@
 FROM alpine:3.21
 
+# hadolint ignore=DL3018
 RUN apk add --no-cache bash ca-certificates rclone restic tzdata && \
     mkdir -p /staging /status /var/log/minvault /run/minvault
 
