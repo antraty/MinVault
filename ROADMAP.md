@@ -16,21 +16,21 @@ MinIO   + HA     TLS      sécurisées planifiée testée  sion     stable   ava
 └────────────── LIVRABLE MINIMAL (50 h) ─────────────┘
 ```
 
-| Version | Nom de code | Thème | Priorité | Statut |
-|---------|-------------|-------|----------|----------|--------|
-| v0.1 | **Socle** | MinIO mono-nœud + outils clients | 🔴 | ✅ |
-| v0.2 | **Cluster** | Cluster distribué 4 nœuds (haute disponibilité) | 🔴 | ✅ |
-| v0.3 | **Gateway** | Nginx, TLS, point d'entrée unique | 🔴 | ✅ |
-| v0.4 | **Coffre** | Buckets, utilisateurs, politiques, versionnage | 🔴 | ✅ |
-| v0.5 | **Filet** | Sauvegarde planifiée restic + rclone | 🔴 | ✅ |
-| v0.6 | **Preuve** | Restauration et test automatisé | 🔴 | ✅ |
-| v0.7 | **Vigie** | Supervision Prometheus / Grafana / alertes | 🟠 | ✅ |
-| v0.8 | **Qualité** | Tests, CI, documentation d'API | 🟠 | ✅ |
-| v1.0 | **Stable** | Première version complète et publique | 🔴 | ✅ |
-| v1.1 | **Forteresse** | Sécurité avancée (Object Lock, chiffrement, audit) | 🟢 | 🚧 |
-| v1.2 | **Miroir** | Réplication et sauvegarde hors site | 🟢 | 🚧 |
-| v1.3 | **Portail** | Service applicatif FastAPI + interface | 🟢 | ⏳ |
-| v2.0 | **Cloud native** | Kubernetes / IaC / SSO | 🟢 | ⏳ |
+| Version | Nom de code | Theme | Priorite | Statut |
+|---|---|---|---|---|
+| v0.1 | Socle | MinIO mono-noeud + outils clients | indispensable | fait |
+| v0.2 | Cluster | Cluster distribue 4 noeuds | indispensable | fait |
+| v0.3 | Gateway | Nginx, TLS, point d entree unique | indispensable | fait |
+| v0.4 | Coffre | Buckets, utilisateurs, politiques | indispensable | fait |
+| v0.5 | Filet | Sauvegarde planifiee restic + rclone | indispensable | fait |
+| v0.6 | Preuve | Restauration et test automatise | indispensable | fait |
+| v0.7 | Vigie | Supervision Prometheus / Grafana | important | fait |
+| v0.8 | Qualite | Tests, CI, documentation API | important | fait |
+| v1.0 | Stable | Premiere version complete | indispensable | fait |
+| v1.1 | Forteresse | Securite avancee | bonus | en cours |
+| v1.2 | Miroir | Replication hors site | bonus | a faire |
+| v1.3 | Portail | Service applicatif FastAPI | bonus | a faire |
+| v2.0 | Cloud native | Kubernetes / IaC / SSO | bonus | a faire |
 
 ---
 
