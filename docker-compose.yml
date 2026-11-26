@@ -9,6 +9,8 @@ x-minio-common: &minio-common
     MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER doit être défini dans .env}
     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD doit être défini dans .env}
     MINIO_PROMETHEUS_AUTH_TYPE: ${MINIO_PROMETHEUS_AUTH_TYPE:-public}
+    # Chiffrement au repos obligatoire : la pile ne démarre pas sans la clé.
+    MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:?MINIO_KMS_SECRET_KEY doit être défini dans .env}
   command: server http://minio{1...4}/data --console-address ":9001"
   networks:
     - minvault
@@ -63,6 +65,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${BACKUP_MINIO_ROOT_USER:?BACKUP_MINIO_ROOT_USER doit être défini dans .env}
       MINIO_ROOT_PASSWORD: ${BACKUP_MINIO_ROOT_PASSWORD:?BACKUP_MINIO_ROOT_PASSWORD doit être défini dans .env}
+      # Même clé maître que le cluster : une seule clé, un seul secret à sauvegarder.
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:?MINIO_KMS_SECRET_KEY doit être défini dans .env}
     command: server /data --console-address ":9001"
     volumes:
       - minio_backup_data:/data

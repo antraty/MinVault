@@ -74,7 +74,7 @@ Mettre en place un stockage compatible S3 auto-hébergé avec politiques d'accè
 - ✅ **Cluster distribué** 4 nœuds avec **erasure coding** (tolérance à la perte de disques/nœuds)
 - ✅ **Console web** d'administration MinIO
 - ✅ **Chiffrement en transit** (TLS terminé par Nginx)
-- ✅ *(Optionnel)* **Chiffrement au repos** (SSE-S3 via KMS/clé statique)
+- ✅ **Chiffrement au repos** (SSE-S3 par défaut sur tous les buckets, forward-only)
 
 ### Gouvernance et sécurité
 - ✅ **Buckets séparés par usage** (`documents`, `media`, `backups`, `logs`)
@@ -285,7 +285,7 @@ Ouvrir la console dans un navigateur affiche un avertissement TLS attendu en dé
 
 ## 9. 🔧 Configuration
 
-Le détail des variables requises (identifiants MinIO, comptes applicatifs, RESTIC, ports et supervision) se trouve dans le fichier [`.env.example`](.env.example). Remplacez toutes les valeurs `CHANGER_` avant le démarrage; les images de conteneurs sont référencées par digest dans Compose et les Dockerfiles pour rendre les téléchargements reproductibles.
+Le détail des variables requises (identifiants MinIO, comptes applicatifs, RESTIC, ports et supervision) se trouve dans le fichier [`.env.example`](.env.example). Remplacez toutes les valeurs `CHANGER_` avant le démarrage; les images de conteneurs sont référencées par digest dans Compose et les Dockerfiles pour rendre les téléchargements reproductibles. La variable `MINIO_KMS_SECRET_KEY` est obligatoire : elle porte la clé maître du chiffrement au repos, ne se rotate pas, et sa perte rend les objets chiffrés indéchiffrables (voir `docs/adr/0001`).
 
 ---
 
