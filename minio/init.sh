@@ -5,6 +5,8 @@ set -euo pipefail
 export PATH="${HOME}/.local/bin:${PATH}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 POLICY_DIR="${ROOT_DIR}/minio/policies"
+# shellcheck source=../scripts/lib-backup-mc.sh
+source "${ROOT_DIR}/scripts/lib-backup-mc.sh"
 MINIO_ENDPOINT="${MINIO_ENDPOINT:-https://s3.localhost}"
 MINIO_ALIAS="${MINIO_ALIAS:-vault}"
 MC_INSECURE="${MC_INSECURE:-1}"
@@ -13,6 +15,7 @@ required_vars=(
   MINIO_ROOT_USER MINIO_ROOT_PASSWORD
   APP_DOCS_SECRET APP_MEDIA_SECRET APP_LOGS_SECRET
   AUDITOR_SECRET BACKUP_AGENT_SECRET
+  BACKUP_MINIO_ROOT_USER BACKUP_MINIO_ROOT_PASSWORD
 )
 for variable in "${required_vars[@]}"; do
   if [[ -z "${!variable:-}" || "${!variable}" == CHANGER_* ]]; then
@@ -20,6 +23,33 @@ for variable in "${required_vars[@]}"; do
     exit 1
   fi
 done
+
+# La clé maître SSE est obligatoire : MinIO refuserait de démarrer si elle est
+# mal formée, mais l'erreur serait cryptique. On échoue ici avec un message net.
+validate_sse_key() {
+  local value="${MINIO_KMS_SECRET_KEY:-}"
+  if [[ -z "$value" ]]; then
+    printf 'Erreur: MINIO_KMS_SECRET_KEY doit être défini dans .env\n' >&2
+    exit 1
+  fi
+  if [[ "$value" == CHANGER_* || "$value" != *:* ]]; then
+    printf 'Erreur: MINIO_KMS_SECRET_KEY doit avoir la forme nom:secret-base64\n' >&2
+    exit 1
+  fi
+  local encoded="${value#*:}"
+  local size
+  if ! size="$(printf '%s' "$encoded" | base64 -d 2>/dev/null | wc -c)"; then
+    printf 'Erreur: le secret de MINIO_KMS_SECRET_KEY n’est pas du base64 valide\n' >&2
+    exit 1
+  fi
+  size="${size//[[:space:]]/}"
+  if [[ "$size" != "32" ]]; then
+    printf 'Erreur: le secret de MINIO_KMS_SECRET_KEY doit décoder 32 octets (obtenu: %s)\n' "$size" >&2
+    exit 1
+  fi
+}
+
+validate_sse_key
 
 command -v mc >/dev/null 2>&1 || {
   echo "Erreur: le client mc doit être installé et présent dans PATH." >&2
@@ -90,6 +120,33 @@ done
 "${MC[@]}" anonymous set none "$MINIO_ALIAS/backups-immutable" >/dev/null
 "${MC[@]}" version enable "$MINIO_ALIAS/backups-immutable" >/dev/null
 "${MC[@]}" retention set --default compliance "${BACKUP_RETENTION:-30d}" "$MINIO_ALIAS/backups-immutable"
+
+# Chiffrement au repos : chiffrement par défaut appliqué au niveau du bucket,
+# afin qu'un client qui omet l'en-tête SSE obtienne malgré tout un objet chiffré.
+# Forward-only : les objets antérieurs restent en clair (voir docs/adr/0001).
+for bucket in documents media logs backups backups-immutable; do
+  "${MC[@]}" encrypt set sse-s3 "$MINIO_ALIAS/$bucket" >/dev/null
+  printf 'Chiffrement SSE-S3 par défaut : %s\n' "$bucket"
+done
+
+# L'instance de sauvegarde n'est joignable que depuis le réseau Compose : le
+# provisioning passe par un conteneur jetable (voir scripts/lib-backup-mc.sh).
+# Le dépôt restic est créé ici pour que son chiffrement soit en place avant que
+# restic n'y écrive quoi que ce soit.
+mc_backup_configure
+backup_buckets=(restic-repo)
+if [[ -z "${MIRROR_ENDPOINT:-}" || "${MIRROR_ENDPOINT}" == "http://minio-backup:9000" ]]; then
+  for bucket in documents media logs; do
+    backup_buckets+=("${MIRROR_BUCKET_PREFIX:-minvault}-${bucket}")
+  done
+else
+  printf 'MIRROR_ENDPOINT externe : chiffrement des buckets miroir à la charge de l’opérateur.\n'
+fi
+for bucket in "${backup_buckets[@]}"; do
+  mc_backup mb --ignore-existing "backup/$bucket" >/dev/null
+  mc_backup encrypt set sse-s3 "backup/$bucket" >/dev/null
+  printf 'Chiffrement SSE-S3 par défaut : minio-backup/%s\n' "$bucket"
+done
 
 ensure_user app-docs "$APP_DOCS_SECRET"
 attach_policy_user rw-documents app-docs

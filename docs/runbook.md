@@ -81,6 +81,38 @@ bash tests/test_object_lock.sh
 mc --insecure retention info vault/backups-immutable
 ```
 
+## Chiffrement au repos (v1.1)
+
+Tous les nouveaux objets écrits dans le cluster et dans `minio-backup` sont chiffrés en SSE-S3 avec la clé maître définie par `MINIO_KMS_SECRET_KEY`. Le chiffrement est appliqué par défaut au niveau de chaque bucket : un client qui n’envoie pas d’en-tête de chiffrement obtient malgré tout un objet chiffré.
+
+Générer la clé avant le premier démarrage :
+
+```bash
+printf 'minvault-sse:%s\n' "$(openssl rand -base64 32)" >> .env
+```
+
+La clé doit avoir la forme `nom:secret-base64` et décoder exactement 32 octets. `minio/init.sh` refuse de s’exécuter sinon, et MinIO refuse de démarrer si la valeur est mal formée.
+
+**Secret de dernier recours.** Perdre cette clé rend les objets chiffrés définitivement indéchiffrables. Elle se sauvegarde hors du dépôt, au même rang que `RESTIC_PASSWORD`. Elle **n’est pas rotative** : la changer rendrait tous les objets existants illisibles (voir `docs/adr/0001`).
+
+**Chiffrement forward-only.** Les objets écrits avant l’activation restent en clair. Pour les réécrire, en fenêtre de maintenance, recopier chaque objet sur lui-même en remplaçant ses métadonnées (CopyObject avec `REPLACE`). Une recette sûre passe par une clé temporaire :
+
+```bash
+# Exemple pour un objet précis ; généraliser avec une boucle sur la liste des objets.
+mc --insecure cp vault/documents/objet.txt vault/documents/.rewrite/objet.txt
+mc --insecure cp vault/documents/.rewrite/objet.txt vault/documents/objet.txt
+mc --insecure rm vault/documents/.rewrite/objet.txt
+```
+
+Sur un bucket versionné, les anciennes versions en clair subsistent comme versions non courantes jusqu’à leur expiration ILM : la réécriture ne les efface pas. Sur `backups-immutable`, la rétention Compliance interdit la suppression : la réécriture n’y est possible que pour de nouveaux objets.
+
+Vérifier le chiffrement effectif :
+
+```bash
+mc --insecure stat --json vault/documents/objet.txt | grep -i server-side-encryption
+bash tests/test_sse.sh
+```
+
 ## Opérations S3 de base
 
 ```bash

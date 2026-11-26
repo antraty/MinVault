@@ -20,3 +20,6 @@ mc_setup_aliases() {
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 ok() { printf 'OK: %s\n' "$*"; }
+
+# shellcheck source=../scripts/lib-backup-mc.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/lib-backup-mc.sh"

@@ -32,6 +32,7 @@ jobs:
           cat > .env <<'EOF'
           MINIO_ROOT_USER=minvault-admin
           MINIO_ROOT_PASSWORD=minvault-root-password-123
+          MINIO_KMS_SECRET_KEY=minvault-sse:nSK441x7x+ydAeItOV5g5AMaJI8b0JmtVIwUnBVWQfk=
           BACKUP_MINIO_ROOT_USER=backup-admin
           BACKUP_MINIO_ROOT_PASSWORD=backup-root-password-123
           RESTIC_PASSWORD=restic-password-123

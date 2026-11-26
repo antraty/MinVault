@@ -19,6 +19,7 @@ export NGINX_HTTPS_PORT="${NGINX_HTTPS_PORT:-443}"
 ./tests/test_policies.sh
 ./tests/test_anonymous.sh
 ./tests/test_versioning.sh
+bash ./tests/test_sse.sh
 bash ./tests/test_object_lock.sh
 
 docker compose run --rm backup /usr/local/bin/backup.sh
